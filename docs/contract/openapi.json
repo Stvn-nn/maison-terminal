@@ -1,0 +1,2274 @@
+{
+  "components": {
+    "schemas": {
+      "Candle": {
+        "additionalProperties": false,
+        "properties": {
+          "close": {
+            "exclusiveMinimum": 0.0,
+            "title": "Close",
+            "type": "number"
+          },
+          "high": {
+            "exclusiveMinimum": 0.0,
+            "title": "High",
+            "type": "number"
+          },
+          "low": {
+            "exclusiveMinimum": 0.0,
+            "title": "Low",
+            "type": "number"
+          },
+          "open": {
+            "exclusiveMinimum": 0.0,
+            "title": "Open",
+            "type": "number"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Unix seconds (UTC) or 'YYYY-MM-DD'.",
+            "title": "Time"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume"
+          }
+        },
+        "required": [
+          "time",
+          "open",
+          "high",
+          "low",
+          "close"
+        ],
+        "title": "Candle",
+        "type": "object"
+      },
+      "CandleColorProfile": {
+        "enum": [
+          "auto",
+          "green_red",
+          "monochrome"
+        ],
+        "title": "CandleColorProfile",
+        "type": "string"
+      },
+      "CandlestickPoint": {
+        "description": "Lightweight Charts `CandlestickData` point.",
+        "properties": {
+          "close": {
+            "title": "Close",
+            "type": "number"
+          },
+          "high": {
+            "title": "High",
+            "type": "number"
+          },
+          "low": {
+            "title": "Low",
+            "type": "number"
+          },
+          "open": {
+            "title": "Open",
+            "type": "number"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Time"
+          }
+        },
+        "required": [
+          "time",
+          "open",
+          "high",
+          "low",
+          "close"
+        ],
+        "title": "CandlestickPoint",
+        "type": "object"
+      },
+      "ChartPane": {
+        "enum": [
+          "price",
+          "oscillator"
+        ],
+        "title": "ChartPane",
+        "type": "string"
+      },
+      "ChartSeries": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/LinePoint"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "key": {
+            "description": "Column name, e.g. 'EMA_21', 'MACDh_12_26_9'.",
+            "title": "Key",
+            "type": "string"
+          },
+          "style": {
+            "$ref": "#/components/schemas/SeriesStyle"
+          }
+        },
+        "required": [
+          "key",
+          "style",
+          "data"
+        ],
+        "title": "ChartSeries",
+        "type": "object"
+      },
+      "EconomicCalendarResponse": {
+        "properties": {
+          "cached": {
+            "title": "Cached",
+            "type": "boolean"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EconomicEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "from_date": {
+            "title": "From Date",
+            "type": "string"
+          },
+          "to_date": {
+            "title": "To Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_date",
+          "to_date",
+          "count",
+          "events",
+          "cached"
+        ],
+        "title": "EconomicCalendarResponse",
+        "type": "object"
+      },
+      "EconomicEvent": {
+        "properties": {
+          "actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual"
+          },
+          "country": {
+            "title": "Country",
+            "type": "string"
+          },
+          "estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable hash of country + event + time.",
+            "title": "Id",
+            "type": "string"
+          },
+          "impact": {
+            "$ref": "#/components/schemas/ImpactLevel"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous"
+          },
+          "time": {
+            "description": "Release time, UTC.",
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "id",
+          "time",
+          "country",
+          "event",
+          "impact",
+          "actual",
+          "estimate",
+          "previous",
+          "unit"
+        ],
+        "title": "EconomicEvent",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HeadlineSentiment": {
+        "properties": {
+          "label": {
+            "$ref": "#/components/schemas/SentimentLabel"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "source": {
+            "const": "lexicon",
+            "default": "lexicon",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "score",
+          "label"
+        ],
+        "title": "HeadlineSentiment",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "finnhub_configured": {
+            "title": "Finnhub Configured",
+            "type": "boolean"
+          },
+          "server_time": {
+            "format": "date-time",
+            "title": "Server Time",
+            "type": "string"
+          },
+          "service": {
+            "default": "maison-terminal-core",
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "vision_running": {
+            "title": "Vision Running",
+            "type": "boolean"
+          },
+          "websocket_clients": {
+            "title": "Websocket Clients",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "server_time",
+          "finnhub_configured",
+          "vision_running",
+          "websocket_clients"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "ImpactLevel": {
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "title": "ImpactLevel",
+        "type": "string"
+      },
+      "IndicatorCatalogEntry": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "inputs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Inputs",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pane": {
+            "$ref": "#/components/schemas/ChartPane"
+          },
+          "params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Params",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "pane",
+          "inputs",
+          "params"
+        ],
+        "title": "IndicatorCatalogEntry",
+        "type": "object"
+      },
+      "IndicatorCatalogResponse": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorCatalogEntry"
+            },
+            "title": "Indicators",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "indicators"
+        ],
+        "title": "IndicatorCatalogResponse",
+        "type": "object"
+      },
+      "IndicatorComputeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "candles": {
+            "items": {
+              "$ref": "#/components/schemas/Candle"
+            },
+            "minItems": 2,
+            "title": "Candles",
+            "type": "array"
+          },
+          "include_candles": {
+            "default": true,
+            "title": "Include Candles",
+            "type": "boolean"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorSpec"
+            },
+            "title": "Indicators",
+            "type": "array"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StrategyPreset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Adds the preset's indicators to `indicators`."
+          }
+        },
+        "required": [
+          "candles"
+        ],
+        "title": "IndicatorComputeRequest",
+        "type": "object"
+      },
+      "IndicatorComputeResponse": {
+        "properties": {
+          "candles": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CandlestickPoint"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candles"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorResult"
+            },
+            "title": "Indicators",
+            "type": "array"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StrategySummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present when the core EMA/RSI/MACD/BBands columns were computed."
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LinePoint"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume"
+          }
+        },
+        "required": [
+          "candles",
+          "volume",
+          "indicators",
+          "summary"
+        ],
+        "title": "IndicatorComputeResponse",
+        "type": "object"
+      },
+      "IndicatorResult": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pane": {
+            "$ref": "#/components/schemas/ChartPane"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "reference_lines": {
+            "description": "Horizontal guides, e.g. RSI 30/70.",
+            "items": {
+              "type": "number"
+            },
+            "title": "Reference Lines",
+            "type": "array"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/ChartSeries"
+            },
+            "title": "Series",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "params",
+          "pane",
+          "series"
+        ],
+        "title": "IndicatorResult",
+        "type": "object"
+      },
+      "IndicatorSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Client label echoed back.",
+            "title": "Id"
+          },
+          "name": {
+            "description": "pandas-ta indicator name, e.g. 'ema', 'rsi', 'macd'.",
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "IndicatorSpec",
+        "type": "object"
+      },
+      "LinePoint": {
+        "description": "Lightweight Charts `LineData` / `HistogramData` point.",
+        "properties": {
+          "time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Time"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "time",
+          "value"
+        ],
+        "title": "LinePoint",
+        "type": "object"
+      },
+      "MonitorInfo": {
+        "properties": {
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "is_virtual_desktop": {
+            "title": "Is Virtual Desktop",
+            "type": "boolean"
+          },
+          "left": {
+            "title": "Left",
+            "type": "integer"
+          },
+          "top": {
+            "title": "Top",
+            "type": "integer"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index",
+          "left",
+          "top",
+          "width",
+          "height",
+          "is_virtual_desktop"
+        ],
+        "title": "MonitorInfo",
+        "type": "object"
+      },
+      "MultiTimeframeScanRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "strategy": {
+            "$ref": "#/components/schemas/StrategyPreset",
+            "default": "maison_core"
+          },
+          "timeframes": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/Candle"
+              },
+              "type": "array"
+            },
+            "description": "Map of timeframe label (e.g. '15m', '1h', '1D') to candles.",
+            "title": "Timeframes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "timeframes"
+        ],
+        "title": "MultiTimeframeScanRequest",
+        "type": "object"
+      },
+      "MultiTimeframeScanResponse": {
+        "properties": {
+          "aligned_timeframes": {
+            "title": "Aligned Timeframes",
+            "type": "integer"
+          },
+          "confluence_bias": {
+            "$ref": "#/components/schemas/SignalBias"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TimeframeScanResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_timeframes": {
+            "title": "Total Timeframes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "confluence_bias",
+          "aligned_timeframes",
+          "total_timeframes"
+        ],
+        "title": "MultiTimeframeScanResponse",
+        "type": "object"
+      },
+      "NewsItem": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "related": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Related",
+            "type": "array"
+          },
+          "sentiment": {
+            "$ref": "#/components/schemas/HeadlineSentiment"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "published_at",
+          "headline",
+          "summary",
+          "source",
+          "url",
+          "category",
+          "related",
+          "image",
+          "sentiment"
+        ],
+        "title": "NewsItem",
+        "type": "object"
+      },
+      "NewsResponse": {
+        "properties": {
+          "cached": {
+            "title": "Cached",
+            "type": "boolean"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NewsItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          }
+        },
+        "required": [
+          "category",
+          "symbol",
+          "count",
+          "items",
+          "cached"
+        ],
+        "title": "NewsResponse",
+        "type": "object"
+      },
+      "PixelRect": {
+        "properties": {
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          },
+          "x": {
+            "title": "X",
+            "type": "integer"
+          },
+          "y": {
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "PixelRect",
+        "type": "object"
+      },
+      "PriceTarget": {
+        "properties": {
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "r_multiple": {
+            "title": "R Multiple",
+            "type": "number"
+          }
+        },
+        "required": [
+          "r_multiple",
+          "price"
+        ],
+        "title": "PriceTarget",
+        "type": "object"
+      },
+      "ScreenRegion": {
+        "additionalProperties": false,
+        "description": "Absolute virtual-desktop rectangle in physical pixels (may be negative).",
+        "properties": {
+          "height": {
+            "maximum": 8192.0,
+            "minimum": 64.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "left": {
+            "title": "Left",
+            "type": "integer"
+          },
+          "top": {
+            "title": "Top",
+            "type": "integer"
+          },
+          "width": {
+            "maximum": 8192.0,
+            "minimum": 64.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "left",
+          "top",
+          "width",
+          "height"
+        ],
+        "title": "ScreenRegion",
+        "type": "object"
+      },
+      "SentimentLabel": {
+        "enum": [
+          "bullish",
+          "bearish",
+          "neutral"
+        ],
+        "title": "SentimentLabel",
+        "type": "string"
+      },
+      "SeriesStyle": {
+        "enum": [
+          "line",
+          "histogram"
+        ],
+        "title": "SeriesStyle",
+        "type": "string"
+      },
+      "SignalBias": {
+        "enum": [
+          "bullish",
+          "bearish",
+          "neutral"
+        ],
+        "title": "SignalBias",
+        "type": "string"
+      },
+      "SizingMode": {
+        "enum": [
+          "fixed_cash",
+          "equity_pct",
+          "risk_to_stop"
+        ],
+        "title": "SizingMode",
+        "type": "string"
+      },
+      "SizingRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "account_equity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Equity"
+          },
+          "allow_fractional": {
+            "default": false,
+            "title": "Allow Fractional",
+            "type": "boolean"
+          },
+          "cash_amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fixed_cash: notional to deploy.",
+            "title": "Cash Amount"
+          },
+          "entry_price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Entry Price",
+            "type": "number"
+          },
+          "equity_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "equity_pct: percent of equity to deploy.",
+            "title": "Equity Pct"
+          },
+          "lot_size": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Round shares down to this step. Defaults to 1, or 0.0001 when fractional.",
+            "title": "Lot Size"
+          },
+          "max_notional": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional buying-power cap on position notional.",
+            "title": "Max Notional"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SizingMode"
+          },
+          "risk_cash": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "risk_to_stop: dollars to lose if the stop is hit.",
+            "title": "Risk Cash"
+          },
+          "risk_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "risk_to_stop: percent of equity to risk.",
+            "title": "Risk Pct"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TradeSide"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inferred from stop_price vs entry_price when omitted."
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Price"
+          },
+          "target_r_multiples": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Target R Multiples",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "entry_price"
+        ],
+        "title": "SizingRequest",
+        "type": "object"
+      },
+      "SizingResponse": {
+        "properties": {
+          "capped_by_max_notional": {
+            "title": "Capped By Max Notional",
+            "type": "boolean"
+          },
+          "entry_price": {
+            "title": "Entry Price",
+            "type": "number"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SizingMode"
+          },
+          "notional": {
+            "title": "Notional",
+            "type": "number"
+          },
+          "notional_pct_of_equity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notional Pct Of Equity"
+          },
+          "risk_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Dollars lost if the stop is hit.",
+            "title": "Risk Amount"
+          },
+          "risk_pct_of_equity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Pct Of Equity"
+          },
+          "shares": {
+            "title": "Shares",
+            "type": "number"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TradeSide"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stop_distance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Distance"
+          },
+          "stop_distance_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Distance Pct"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Price"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/PriceTarget"
+            },
+            "title": "Targets",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "side",
+          "shares",
+          "entry_price",
+          "stop_price",
+          "notional",
+          "stop_distance",
+          "stop_distance_pct",
+          "risk_amount",
+          "risk_pct_of_equity",
+          "notional_pct_of_equity",
+          "capped_by_max_notional",
+          "targets",
+          "warnings"
+        ],
+        "title": "SizingResponse",
+        "type": "object"
+      },
+      "StrategyPreset": {
+        "enum": [
+          "maison_core"
+        ],
+        "title": "StrategyPreset",
+        "type": "string"
+      },
+      "StrategySignal": {
+        "properties": {
+          "bias": {
+            "$ref": "#/components/schemas/SignalBias"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "bias",
+          "detail"
+        ],
+        "title": "StrategySignal",
+        "type": "object"
+      },
+      "StrategySummary": {
+        "properties": {
+          "bias": {
+            "$ref": "#/components/schemas/SignalBias"
+          },
+          "last_close": {
+            "title": "Last Close",
+            "type": "number"
+          },
+          "last_time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Last Time"
+          },
+          "score": {
+            "description": "Sum of +1 bullish / -1 bearish signals.",
+            "title": "Score",
+            "type": "integer"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/StrategySignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "bias",
+          "score",
+          "signals",
+          "last_close",
+          "last_time"
+        ],
+        "title": "StrategySummary",
+        "type": "object"
+      },
+      "SwingPoint": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "high",
+              "low"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "x": {
+            "title": "X",
+            "type": "integer"
+          },
+          "y": {
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "kind"
+        ],
+        "title": "SwingPoint",
+        "type": "object"
+      },
+      "SymbolSentimentResponse": {
+        "properties": {
+          "articles_analysed": {
+            "title": "Articles Analysed",
+            "type": "integer"
+          },
+          "bearish_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bearish Pct"
+          },
+          "bullish_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bullish Pct"
+          },
+          "label": {
+            "$ref": "#/components/schemas/SentimentLabel"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "source": {
+            "enum": [
+              "finnhub",
+              "lexicon"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "source",
+          "bullish_pct",
+          "bearish_pct",
+          "score",
+          "label",
+          "articles_analysed"
+        ],
+        "title": "SymbolSentimentResponse",
+        "type": "object"
+      },
+      "TimeframeScanResult": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/StrategySummary"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timeframe",
+          "summary"
+        ],
+        "title": "TimeframeScanResult",
+        "type": "object"
+      },
+      "TradeSide": {
+        "enum": [
+          "long",
+          "short"
+        ],
+        "title": "TradeSide",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VisionAnalysis": {
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "chart_bounds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PixelRect"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "data_coverage": {
+            "description": "Fraction of plot columns containing candles.",
+            "title": "Data Coverage",
+            "type": "number"
+          },
+          "data_left_x": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Left X"
+          },
+          "image_height": {
+            "title": "Image Height",
+            "type": "integer"
+          },
+          "image_width": {
+            "title": "Image Width",
+            "type": "integer"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "structure_truncated": {
+            "title": "Structure Truncated",
+            "type": "boolean"
+          },
+          "swing_points": {
+            "items": {
+              "$ref": "#/components/schemas/SwingPoint"
+            },
+            "title": "Swing Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "captured_at",
+          "image_width",
+          "image_height",
+          "chart_bounds",
+          "data_left_x",
+          "data_coverage",
+          "swing_points",
+          "structure_truncated",
+          "reasons",
+          "confidence"
+        ],
+        "title": "VisionAnalysis",
+        "type": "object"
+      },
+      "VisionCheckRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "color_profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CandleColorProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "image_base64": {
+            "anyOf": [
+              {
+                "maxLength": 12000000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional PNG/JPEG to analyse instead of capturing the configured region.",
+            "title": "Image Base64"
+          },
+          "plot_bounds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PixelRect"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "VisionCheckRequest",
+        "type": "object"
+      },
+      "VisionConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "color_profile": {
+            "$ref": "#/components/schemas/CandleColorProfile",
+            "default": "auto"
+          },
+          "left_margin_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 0.3,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Margin Pct"
+          },
+          "plot_bounds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PixelRect"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Manual plot-area override, relative to the region."
+          },
+          "region": {
+            "$ref": "#/components/schemas/ScreenRegion"
+          }
+        },
+        "required": [
+          "region"
+        ],
+        "title": "VisionConfig",
+        "type": "object"
+      },
+      "VisionState": {
+        "enum": [
+          "idle",
+          "no_chart",
+          "structure_visible",
+          "backtrack_required"
+        ],
+        "title": "VisionState",
+        "type": "string"
+      },
+      "VisionStatus": {
+        "properties": {
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisionConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisionAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/VisionState"
+          }
+        },
+        "required": [
+          "running",
+          "state",
+          "config",
+          "last_analysis",
+          "last_error"
+        ],
+        "title": "VisionStatus",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Local analytical sidecar for the Maison Terminal desktop app.",
+    "title": "Maison Terminal Core",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/indicators": {
+      "get": {
+        "operationId": "list_indicators_api_v1_indicators_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndicatorCatalogResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Indicators",
+        "tags": [
+          "indicators"
+        ]
+      }
+    },
+    "/api/v1/indicators/compute": {
+      "post": {
+        "operationId": "compute_api_v1_indicators_compute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndicatorComputeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndicatorComputeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Compute",
+        "tags": [
+          "indicators"
+        ]
+      }
+    },
+    "/api/v1/indicators/scan": {
+      "post": {
+        "operationId": "scan_api_v1_indicators_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiTimeframeScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiTimeframeScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scan",
+        "tags": [
+          "indicators"
+        ]
+      }
+    },
+    "/api/v1/macro/calendar": {
+      "get": {
+        "operationId": "economic_calendar_api_v1_macro_calendar_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "description": "Minimum impact level",
+            "in": "query",
+            "name": "impact",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ImpactLevel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum impact level",
+              "title": "Impact"
+            }
+          },
+          {
+            "in": "query",
+            "name": "country",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 3,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EconomicCalendarResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Economic Calendar",
+        "tags": [
+          "macro"
+        ]
+      }
+    },
+    "/api/v1/macro/news": {
+      "get": {
+        "operationId": "market_news_api_v1_macro_news_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "default": "general",
+              "title": "Category",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Market News",
+        "tags": [
+          "macro"
+        ]
+      }
+    },
+    "/api/v1/macro/sentiment": {
+      "get": {
+        "operationId": "symbol_sentiment_api_v1_macro_sentiment_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "maxLength": 20,
+              "title": "Symbol",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SymbolSentimentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Symbol Sentiment",
+        "tags": [
+          "macro"
+        ]
+      }
+    },
+    "/api/v1/sizing/calculate": {
+      "post": {
+        "operationId": "calculate_sizing_api_v1_sizing_calculate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SizingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Calculate Sizing",
+        "tags": [
+          "sizing"
+        ]
+      }
+    },
+    "/api/v1/vision/check": {
+      "post": {
+        "operationId": "check_api_v1_vision_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisionCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisionAnalysis"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
+    "/api/v1/vision/config": {
+      "put": {
+        "operationId": "put_config_api_v1_vision_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisionConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisionStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Config",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
+    "/api/v1/vision/monitors": {
+      "get": {
+        "operationId": "get_monitors_api_v1_vision_monitors_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MonitorInfo"
+                  },
+                  "title": "Response Get Monitors Api V1 Vision Monitors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Monitors",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
+    "/api/v1/vision/start": {
+      "post": {
+        "operationId": "start_watch_api_v1_vision_start_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisionStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start Watch",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
+    "/api/v1/vision/status": {
+      "get": {
+        "operationId": "get_status_api_v1_vision_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisionStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Status",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
+    "/api/v1/vision/stop": {
+      "post": {
+        "operationId": "stop_watch_api_v1_vision_stop_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisionStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Stop Watch",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "system"
+        ]
+      }
+    }
+  }
+}
