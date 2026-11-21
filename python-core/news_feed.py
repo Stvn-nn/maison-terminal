@@ -33,6 +33,8 @@ from schemas import (
     EconomicEvent,
     HeadlineSentiment,
     ImpactLevel,
+    MacroEventUpcomingData,
+    NewsFlashData,
     NewsItem,
     NewsResponse,
     SentimentLabel,
@@ -526,7 +528,7 @@ class MacroFeedService:
                 await self._broadcaster.broadcast(
                     WsEventType.MACRO_EVENT_UPCOMING,
                     f"{event.country} {event.event} in {minutes_until} min",
-                    {"event": event.model_dump(mode="json"), "minutes_until": minutes_until},
+                    MacroEventUpcomingData(event=event, minutes_until=minutes_until),
                 )
 
     async def _announce_fresh_news(self) -> None:
@@ -540,7 +542,7 @@ class MacroFeedService:
         self._seen_news_ids |= current_ids
         for item in fresh_items[:MAX_NEWS_FLASHES_PER_POLL]:
             await self._broadcaster.broadcast(
-                WsEventType.NEWS_FLASH, item.headline, {"item": item.model_dump(mode="json")}
+                WsEventType.NEWS_FLASH, item.headline, NewsFlashData(item=item)
             )
 
     async def run_poller(self) -> None:

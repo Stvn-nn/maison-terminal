@@ -28,7 +28,14 @@ import news_feed
 import vision
 from config import Settings, finnhub_key, get_settings
 from errors import ApiError
-from schemas import HealthResponse, SizingRequest, SizingResponse, WsClientMessage, WsEventType
+from schemas import (
+    HealthResponse,
+    HelloEventData,
+    SizingRequest,
+    SizingResponse,
+    WsClientMessage,
+    WsEventType,
+)
 from sizing import calculate_position_size
 from ws import WebSocketBroadcaster, build_event
 
@@ -183,7 +190,7 @@ def _register_websocket(app: FastAPI) -> None:
             build_event(
                 WsEventType.HELLO,
                 "Maison Terminal core connected",
-                {"version": SERVICE_VERSION},
+                HelloEventData(version=SERVICE_VERSION),
             ),
         )
         try:

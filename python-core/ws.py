@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import WebSocket
+from pydantic import BaseModel
 
 from schemas import WsEvent, WsEventType
 
@@ -21,11 +22,13 @@ logger = logging.getLogger("maison.ws")
 DEFAULT_SEND_TIMEOUT_SECONDS = 2.0
 HEARTBEAT_INTERVAL_SECONDS = 20.0
 
+EventData = BaseModel | dict[str, Any] | None
 
-def build_event(
-    event_type: WsEventType, message: str, data: dict[str, Any] | None = None
-) -> WsEvent:
-    return WsEvent(event=event_type, message=message, ts=datetime.now(UTC), data=data)
+
+def build_event(event_type: WsEventType, message: str, data: EventData = None) -> WsEvent:
+    """Build an envelope; typed ``data`` models (see schemas.WS_EVENT_DATA_MODELS) are dumped."""
+    event_data = data.model_dump(mode="json") if isinstance(data, BaseModel) else data
+    return WsEvent(event=event_type, message=message, ts=datetime.now(UTC), data=event_data)
 
 
 class WebSocketBroadcaster:
@@ -65,7 +68,7 @@ class WebSocketBroadcaster:
         self,
         event_type: WsEventType,
         message: str,
-        data: dict[str, Any] | None = None,
+        data: EventData = None,
     ) -> int:
         """Send an event to every connected client and return how many received it."""
         event = build_event(event_type, message, data)

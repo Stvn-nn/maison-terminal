@@ -470,3 +470,42 @@ class WsClientMessage(StrictModel):
     """Client-to-server frame. Only ``{"action": "ping"}`` is supported today."""
 
     action: Literal["ping"]
+
+
+class HelloEventData(BaseModel):
+    version: str
+
+
+class BacktrackEventData(BaseModel):
+    reasons: list[str]
+    confidence: float
+    data_left_x: int | None
+    chart_bounds: PixelRect | None
+
+
+class VisionStatusEventData(BaseModel):
+    running: bool
+    error: str | None = None
+
+
+class MacroEventUpcomingData(BaseModel):
+    event: EconomicEvent
+    minutes_until: int
+
+
+class NewsFlashData(BaseModel):
+    item: NewsItem
+
+
+# ``data`` model for each server event; ``None`` means the event carries no data.
+WS_EVENT_DATA_MODELS: dict[WsEventType, type[BaseModel] | None] = {
+    WsEventType.HELLO: HelloEventData,
+    WsEventType.HEARTBEAT: None,
+    WsEventType.PONG: None,
+    WsEventType.ERROR: None,
+    WsEventType.BACKTRACK_REQUIRED: BacktrackEventData,
+    WsEventType.BACKTRACK_CLEARED: BacktrackEventData,
+    WsEventType.VISION_STATUS: VisionStatusEventData,
+    WsEventType.MACRO_EVENT_UPCOMING: MacroEventUpcomingData,
+    WsEventType.NEWS_FLASH: NewsFlashData,
+}

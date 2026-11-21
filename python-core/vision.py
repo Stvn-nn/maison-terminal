@@ -47,6 +47,7 @@ from errors import ApiError
 from schemas import (
     BACKTRACK_CLEARED_MESSAGE,
     BACKTRACK_REQUIRED_MESSAGE,
+    BacktrackEventData,
     CandleColorProfile,
     MonitorInfo,
     PixelRect,
@@ -57,6 +58,7 @@ from schemas import (
     VisionConfig,
     VisionState,
     VisionStatus,
+    VisionStatusEventData,
     WsEventType,
 )
 from ws import WebSocketBroadcaster
@@ -533,15 +535,13 @@ class BacktrackDebouncer:
         return None
 
 
-def backtrack_event_data(analysis: VisionAnalysis) -> dict[str, Any]:
-    return {
-        "reasons": analysis.reasons,
-        "confidence": analysis.confidence,
-        "data_left_x": analysis.data_left_x,
-        "chart_bounds": None
-        if analysis.chart_bounds is None
-        else analysis.chart_bounds.model_dump(),
-    }
+def backtrack_event_data(analysis: VisionAnalysis) -> BacktrackEventData:
+    return BacktrackEventData(
+        reasons=analysis.reasons,
+        confidence=analysis.confidence,
+        data_left_x=analysis.data_left_x,
+        chart_bounds=analysis.chart_bounds,
+    )
 
 
 # --------------------------------------------------------------------------------------
@@ -621,7 +621,7 @@ class VisionService:
         self._last_error = None
         self._loop_task = asyncio.create_task(self._capture_loop(), name="vision-loop")
         await self._broadcaster.broadcast(
-            WsEventType.VISION_STATUS, "Chart watch started", {"running": True}
+            WsEventType.VISION_STATUS, "Chart watch started", VisionStatusEventData(running=True)
         )
 
     async def stop(self) -> None:
@@ -632,7 +632,7 @@ class VisionService:
             await self._loop_task
         self._loop_task = None
         await self._broadcaster.broadcast(
-            WsEventType.VISION_STATUS, "Chart watch stopped", {"running": False}
+            WsEventType.VISION_STATUS, "Chart watch stopped", VisionStatusEventData(running=False)
         )
 
     async def shutdown(self) -> None:
@@ -684,7 +684,7 @@ class VisionService:
                     await self._broadcaster.broadcast(
                         WsEventType.VISION_STATUS,
                         "Chart watch error",
-                        {"running": True, "error": error_text},
+                        VisionStatusEventData(running=True, error=error_text),
                     )
                 self._last_error = error_text
                 await asyncio.sleep(ERROR_BACKOFF_SECONDS)
