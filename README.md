@@ -6,11 +6,11 @@
 </h1>
 
 <p align="center">
-  <a href="https://github.com/Stvn-nn/maison-terminal/actions/runs/44948892352/artifacts/14724867355"><strong>⬇ Download the Windows installer (v0.1.0, 64 MB)</strong></a>
+  <a href="https://github.com/Stvn-nn/maison-terminal/releases/download/v0.1.0/Maison-Terminal_0.1.0_x64-setup.exe"><strong>⬇ Download the Windows installer (v0.1.0, 64 MB)</strong></a>
   <br>
   <sub>Windows 10/11 (64-bit) · per-user installer, no admin rights · analytical engine included, no Python needed</sub>
   <br>
-  <sub>Downloads a .zip containing <code>Maison Terminal_0.1.0_x64-setup.exe</code>. Requires a GitHub sign-in; this build link expires on 5 Dec 2026, after which use the <a href="https://github.com/Stvn-nn/maison-terminal/actions/workflows/desktop-installer.yml">latest build</a> or <a href="https://github.com/Stvn-nn/maison-terminal/releases/latest">releases</a>.</sub>
+  <sub><a href="https://github.com/Stvn-nn/maison-terminal/releases/tag/v0.1.0">Release notes</a> · <a href="https://github.com/Stvn-nn/maison-terminal/releases">All releases</a></sub>
 </p>
 
 <p align="center">
@@ -44,13 +44,11 @@ packaged into a standalone program) and starts it when you open the app.
 
 ## Download and install
 
-1. [Download the installer](https://github.com/Stvn-nn/maison-terminal/actions/runs/44948892352/artifacts/14724867355)
-   (sign in to GitHub first) and unzip it to get **`Maison Terminal_0.1.0_x64-setup.exe`**.
-   Newer builds appear under the
-   [**Desktop installer (Windows)**](https://github.com/Stvn-nn/maison-terminal/actions/workflows/desktop-installer.yml)
-   workflow: open the latest successful run and download **maison-terminal-windows-installer**
-   from *Artifacts* (each build is kept for 14 days). Published versions are under
-   [Releases](https://github.com/Stvn-nn/maison-terminal/releases/latest).
+1. [Download **`Maison-Terminal_0.1.0_x64-setup.exe`**](https://github.com/Stvn-nn/maison-terminal/releases/download/v0.1.0/Maison-Terminal_0.1.0_x64-setup.exe)
+   from the [v0.1.0 release](https://github.com/Stvn-nn/maison-terminal/releases/tag/v0.1.0).
+   No GitHub account is needed. SHA-256:
+   `9378b379b3fb4619b2403836c848dd0f468dfa8802078d7bc1aee48b33f60222`.
+   Newer versions will appear under [Releases](https://github.com/Stvn-nn/maison-terminal/releases).
 2. Run the installer. It installs for your Windows user only, with no administrator rights.
 3. Open **Maison Terminal** from the Start menu. The title bar shows **Starting engine…**,
    then **Engine connected** a few seconds later.
