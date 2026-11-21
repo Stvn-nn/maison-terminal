@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+import indicators
 from config import Settings, finnhub_key, get_settings
 from errors import ApiError
 from schemas import HealthResponse, SizingRequest, SizingResponse, WsClientMessage, WsEventType
@@ -92,6 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     _register_error_handlers(app)
     _register_core_routes(app)
+    app.include_router(indicators.build_router(require_api_token))
     _register_websocket(app)
     return app
 

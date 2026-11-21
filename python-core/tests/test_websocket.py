@@ -57,8 +57,11 @@ def test_rejects_foreign_origin(client: TestClient) -> None:
 
 def test_token_required_when_configured() -> None:
     with TestClient(create_app(build_test_settings(auth_token=TEST_TOKEN))) as authed_client:
-        with pytest.raises(WebSocketDisconnect), authed_client.websocket_connect("/ws") as ws:
-            ws.receive_json()
+        with (
+            pytest.raises(WebSocketDisconnect),
+            authed_client.websocket_connect("/ws") as rejected_socket,
+        ):
+            rejected_socket.receive_json()
         with authed_client.websocket_connect(f"/ws?token={TEST_TOKEN}") as websocket:
             assert websocket.receive_json()["event"] == "HELLO"
 
