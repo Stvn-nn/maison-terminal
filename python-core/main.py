@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 import indicators
+import news_feed
 import vision
 from config import Settings, finnhub_key, get_settings
 from errors import ApiError
@@ -65,7 +66,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         broadcaster: WebSocketBroadcaster = app.state.broadcaster
+        macro_service: news_feed.MacroFeedService = app.state.macro_service
         background_tasks = [asyncio.create_task(broadcaster.run_heartbeat())]
+        if app_settings.macro_poll_enabled and macro_service.is_configured:
+            background_tasks.append(asyncio.create_task(macro_service.run_poller()))
+        elif not macro_service.is_configured:
+            logger.info("FINNHUB_API_KEY not set; macro calendar and news are disabled")
         logger.info("Maison Terminal core started on %s:%s", app_settings.host, app_settings.port)
         try:
             yield
@@ -76,6 +82,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             for task in background_tasks:
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
+            await macro_service.aclose()
 
     app = FastAPI(
         title="Maison Terminal Core",
@@ -86,6 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = app_settings
     app.state.broadcaster = WebSocketBroadcaster()
     app.state.vision_service = vision.VisionService(app_settings, app.state.broadcaster)
+    app.state.macro_service = news_feed.MacroFeedService(app_settings, app.state.broadcaster)
 
     app.add_middleware(
         CORSMiddleware,
@@ -98,6 +106,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     _register_core_routes(app)
     app.include_router(indicators.build_router(require_api_token))
     app.include_router(vision.build_router(require_api_token))
+    app.include_router(news_feed.build_router(require_api_token))
     _register_websocket(app)
     return app
 
