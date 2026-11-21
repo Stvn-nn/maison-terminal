@@ -91,6 +91,22 @@ cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings
 
 ## Release build and install
 
+### In CI (recommended)
+
+`.github/workflows/desktop-installer.yml` builds the installer on a GitHub-hosted Windows runner
+(lint → tests → `tauri build`) whenever desktop files change on `feature/frontend-ui`, or on
+demand from the Actions tab (**Desktop installer (Windows) → Run workflow**). Download it with:
+
+```bash
+gh run download --name maison-terminal-windows-installer --dir installer
+```
+
+### Locally
+
+Requires the Microsoft C++ Build Tools ("Desktop development with C++"). On machines with
+**Smart App Control** enforced, Windows blocks the unsigned helper programs a Rust build runs,
+so local builds fail there; use CI instead.
+
 ```bash
 npm run tauri build
 ```
@@ -102,8 +118,12 @@ src-tauri/target/release/bundle/nsis/Maison Terminal_0.1.0_x64-setup.exe
 ```
 
 It is a per-user NSIS installer (no administrator rights). It adds **Maison Terminal** to the
-Start menu with the gold "M" icon. Identity: product name `Maison Terminal`, bundle identifier
-`com.maisonterminal.desktop`.
+Start menu with the white "MT" monogram icon. Identity: product name `Maison Terminal`, bundle
+identifier `com.maisonterminal.desktop`.
+
+The installer is **not code-signed**. Windows SmartScreen will warn on first run, and on PCs
+with Smart App Control enforced Windows may block it outright. Signing it with a code-signing
+certificate removes both.
 
 ### Pin to the taskbar
 

@@ -7,6 +7,7 @@ coverage/
 # Tauri / Rust build output
 src-tauri/target/
 src-tauri/gen/schemas/
+installer/
 
 # Python sidecar local state (python-core/ itself is tracked on its own branch)
 python-core/.venv/
