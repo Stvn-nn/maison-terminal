@@ -1,0 +1,16 @@
+# Maison Terminal analytical sidecar. Supported Python: 3.11 - 3.13 (developed on 3.12).
+fastapi==0.165.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.4
+pydantic-settings==2.16.3
+httpx==0.28.1
+
+# Technical analysis. The original `pandas-ta` package is no longer installable
+# from PyPI; `pandas-ta-classic` is the maintained fork with the same API.
+pandas==3.1.1
+numpy==2.5.5
+pandas-ta-classic==0.9.0
+
+# Screen vision
+mss==10.2.0
+opencv-python-headless==5.1.0.95
