@@ -84,7 +84,7 @@ function ReleaseItem({ release, currentTime }) {
       <span
         className={cn(
           'min-w-[4.5rem] text-right whitespace-nowrap tabular-figures',
-          isImminent ? 'text-gold' : 'text-muted',
+          isImminent ? 'text-accent' : 'text-muted',
         )}
         aria-label={`Releases in ${formatCountdown(millisecondsUntil)}`}
       >
@@ -210,7 +210,7 @@ export default function CatalystFeed() {
         </div>
         <div className="flex min-w-[6.5rem] flex-col items-end text-[10px] leading-tight">
           {calendar.isStale ? (
-            <span className="font-medium text-gold" title={describeFeedError(calendar.error)}>
+            <span className="font-medium text-caution" title={describeFeedError(calendar.error)}>
               Stale · {formatClockTime(calendar.lastUpdatedAt)}
             </span>
           ) : (

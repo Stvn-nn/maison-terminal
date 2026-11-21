@@ -30,7 +30,7 @@ function EngineStatus() {
 
   const statusPresentation = {
     connected: { label: 'Engine connected', dotClass: 'bg-gain' },
-    connecting: { label: 'Connecting to engine…', dotClass: 'bg-gold animate-pulse-soft' },
+    connecting: { label: 'Connecting to engine…', dotClass: 'bg-accent animate-pulse-soft' },
     reconnecting: {
       label:
         secondsUntilRetry && secondsUntilRetry > 0
@@ -64,7 +64,7 @@ function VisionStatusLabel() {
   const { isConnected } = useTerminalSocket()
   const state = isConnected ? reportedState : 'unknown' // never show a stale watch state
   return (
-    <span className={cn('text-[11px] tracking-wide', state === 'backtrack_required' ? 'text-gold' : 'text-muted')}>
+    <span className={cn('text-[11px] tracking-wide', state === 'backtrack_required' ? 'text-accent' : 'text-muted')}>
       {VISION_STATE_LABELS[state] ?? VISION_STATE_LABELS.unknown}
     </span>
   )

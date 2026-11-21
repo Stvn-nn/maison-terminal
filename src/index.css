@@ -16,9 +16,10 @@
   --color-divider: #222226;
   --color-bone: #f4f4f6;
   --color-muted: #8e8e93;
-  --color-gain: #10b981;
+  --color-gain: #00c805;
   --color-loss: #ef4444;
-  --color-gold: #d4af37;
+  --color-accent: #00c805; /* Robinhood-style green: brand accent */
+  --color-caution: #f97316; /* stale data and warnings: never green */
   --color-impact-high: #ef4444;
   --color-impact-medium: #f97316;
   --color-impact-low: #eab308;
@@ -82,13 +83,13 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-gold);
+    outline: 2px solid var(--color-accent);
     outline-offset: 2px;
     border-radius: 3px;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-gold) 35%, transparent);
+    background: color-mix(in srgb, var(--color-accent) 35%, transparent);
   }
 
   /* Remove number spinners; units are labelled explicitly instead. */

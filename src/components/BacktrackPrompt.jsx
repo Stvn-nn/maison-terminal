@@ -25,11 +25,11 @@ export default function BacktrackPrompt() {
     <div className="pointer-events-none absolute top-14 left-4 z-20 max-w-[min(26rem,calc(100%-2rem))]">
       <div
         role="alert"
-        className="pointer-events-auto flex animate-banner-in items-start gap-3 rounded-md border border-gold/40 bg-obsidian/95 py-3 pr-2 pl-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.55)] backdrop-blur-sm"
+        className="pointer-events-auto flex animate-banner-in items-start gap-3 rounded-md border border-accent/40 bg-obsidian/95 py-3 pr-2 pl-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.55)] backdrop-blur-sm"
       >
-        <History aria-hidden="true" size={16} strokeWidth={1.6} className="mt-0.5 shrink-0 text-gold" />
+        <History aria-hidden="true" size={16} strokeWidth={1.6} className="mt-0.5 shrink-0 text-accent" />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium tracking-[0.22em] text-gold uppercase">Chart watch</p>
+          <p className="text-[10px] font-medium tracking-[0.22em] text-accent uppercase">Chart watch</p>
           {/* Rendered as plain text: React escapes the service-supplied message. */}
           <p className="mt-1 text-[13px] leading-snug text-bone" data-selectable>
             {backtrackState.message}

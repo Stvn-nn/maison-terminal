@@ -63,7 +63,7 @@ function NumberField({ formField, value, onChange, error, isOptional }) {
       </label>
       <div
         className={cn(
-          'flex items-center rounded border bg-obsidian px-2.5 focus-within:border-gold/70',
+          'flex items-center rounded border bg-obsidian px-2.5 focus-within:border-accent/70',
           error ? 'border-loss/70' : 'border-divider',
         )}
       >
@@ -237,7 +237,7 @@ export default function SizingDrawer() {
                 type="checkbox"
                 checked={allowFractional}
                 onChange={(changeEvent) => setAllowFractional(changeEvent.target.checked)}
-                className="size-3.5 accent-gold"
+                className="size-3.5 accent-accent"
               />
               Fractional shares
             </label>
@@ -246,7 +246,7 @@ export default function SizingDrawer() {
 
           <button
             type="submit"
-            className="inline-flex h-9 items-center justify-center gap-2 rounded border border-gold/60 bg-gold/10 text-[12px] font-medium tracking-wide text-bone hover:bg-gold/20"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded border border-accent/60 bg-accent/10 text-[12px] font-medium tracking-wide text-bone hover:bg-accent/20"
           >
             {sizing.status === 'pending' && <LoaderCircle size={13} aria-hidden="true" className="motion-safe:animate-spin" />}
             {sizing.status === 'pending' ? 'Calculating…' : 'Calculate'}
@@ -267,7 +267,7 @@ export default function SizingDrawer() {
             {showResult && (
               <section aria-label="Sizing result" className={cn('flex flex-col gap-3', resultIsOutdated && 'opacity-45')}>
                 {resultIsOutdated && (
-                  <p className="text-[11px] font-medium text-gold">Inputs changed. These figures are for the previous inputs.</p>
+                  <p className="text-[11px] font-medium text-caution">Inputs changed. These figures are for the previous inputs.</p>
                 )}
                 <div className="grid grid-cols-2 gap-2">
                   <ResultCard label="Position size" value={`${formatQuantity(sizingResult.shares)} sh`} emphasis />
@@ -309,7 +309,7 @@ export default function SizingDrawer() {
                 {sizingResult.warnings.length > 0 && (
                   <ul className="flex flex-col gap-1 border-t border-divider pt-2">
                     {sizingResult.warnings.map((warning) => (
-                      <li key={warning} className="text-[11px] text-gold">
+                      <li key={warning} className="text-[11px] text-caution">
                         {warning}
                       </li>
                     ))}

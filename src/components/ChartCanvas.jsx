@@ -23,14 +23,14 @@ const PALETTE = {
   gridLine: '#17171A',
   bone: '#F4F4F6',
   muted: '#8E8E93',
-  gain: '#10B981',
+  gain: '#00C805',
   loss: '#EF4444',
-  gold: '#D4AF37',
+  accent: '#00C805',
 }
 
 /** Series colours keyed by exact column name first, then by column prefix. */
 const SERIES_COLOR_BY_KEY = {
-  EMA_9: PALETTE.gold,
+  EMA_9: PALETTE.accent,
   EMA_21: 'rgba(244, 244, 246, 0.78)',
   EMA_50: '#8E8E93',
   EMA_200: '#6F7FA3',
@@ -39,8 +39,8 @@ const SERIES_COLOR_BY_PREFIX = [
   ['BBU_', 'rgba(142, 142, 147, 0.55)'],
   ['BBM_', 'rgba(142, 142, 147, 0.35)'],
   ['BBL_', 'rgba(142, 142, 147, 0.55)'],
-  ['RSI_', PALETTE.gold],
-  ['MACDs_', PALETTE.gold],
+  ['RSI_', PALETTE.accent],
+  ['MACDs_', PALETTE.accent],
   ['MACD_', 'rgba(244, 244, 246, 0.85)'],
 ]
 const FALLBACK_SERIES_COLORS = ['#B8A07E', '#7FA7A0', '#A88FB8', '#C9C9CF']
@@ -83,7 +83,7 @@ const BASE_CHART_OPTIONS = {
     fontFamily: '"Inter Variable", "Segoe UI", sans-serif',
     fontSize: 11,
     attributionLogo: true, // required TradingView attribution; do not remove
-    panes: { separatorColor: PALETTE.divider, separatorHoverColor: 'rgba(212, 175, 55, 0.25)' },
+    panes: { separatorColor: PALETTE.divider, separatorHoverColor: 'rgba(0, 200, 5, 0.25)' },
   },
   grid: {
     vertLines: { color: PALETTE.gridLine },
@@ -115,7 +115,7 @@ function renderChartData(chart, chartData, { fitToContent }) {
   chart.applyOptions({ timeScale: { timeVisible: isIntradayData, secondsVisible: false } })
 
   const candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: 'rgba(16, 185, 129, 0.18)',
+    upColor: 'rgba(0, 200, 5, 0.16)',
     downColor: 'rgba(239, 68, 68, 0.85)',
     borderUpColor: PALETTE.gain,
     borderDownColor: PALETTE.loss,
@@ -157,7 +157,7 @@ function renderChartData(chart, chartData, { fitToContent }) {
         chartSeries.setData(
           series.data.map((point) => ({
             ...point,
-            color: point.value >= 0 ? 'rgba(16, 185, 129, 0.55)' : 'rgba(239, 68, 68, 0.55)',
+            color: point.value >= 0 ? 'rgba(0, 200, 5, 0.55)' : 'rgba(239, 68, 68, 0.55)',
           })),
         )
       } else {
@@ -242,7 +242,7 @@ function OpenFileButton({ onClick, variant = 'primary' }) {
       className={cn(
         'inline-flex items-center gap-2 rounded px-3 py-1.5 text-[12px] font-medium transition-colors',
         variant === 'primary'
-          ? 'border border-gold/50 text-bone hover:border-gold hover:bg-gold/10'
+          ? 'border border-accent/50 text-bone hover:border-accent hover:bg-accent/10'
           : 'border border-divider text-muted hover:border-muted hover:text-bone',
       )}
     >
@@ -371,7 +371,7 @@ export default function ChartCanvas() {
             </span>
           )}
           {isStale && (
-            <span className="text-[11px] font-medium text-gold" role="status">
+            <span className="text-[11px] font-medium text-caution" role="status">
               Engine offline · series from {formatClockTime(workspace.computedAt)}
             </span>
           )}
@@ -392,7 +392,7 @@ export default function ChartCanvas() {
           <AlertTriangle size={13} aria-hidden="true" className="shrink-0 text-loss" />
           <span className="min-w-0 flex-1">{describeWorkspaceError(workspace.error)}</span>
           {canRetryFailure && (
-            <button type="button" onClick={workspace.retry} className="text-gold hover:underline">
+            <button type="button" onClick={workspace.retry} className="text-accent hover:underline">
               Retry
             </button>
           )}
@@ -418,7 +418,7 @@ export default function ChartCanvas() {
 
         {isBusy && !hasChartData && (
           <ChartStatePanel
-            icon={<LoaderCircle size={22} aria-hidden="true" className="text-gold motion-safe:animate-spin" />}
+            icon={<LoaderCircle size={22} aria-hidden="true" className="text-accent motion-safe:animate-spin" />}
             title={workspace.status === 'parsing' ? 'Reading file…' : 'Computing indicators…'}
           >
             <p className="text-[12px] text-muted" role="status">
@@ -445,7 +445,7 @@ export default function ChartCanvas() {
                 <button
                   type="button"
                   onClick={workspace.retry}
-                  className="inline-flex items-center gap-2 rounded border border-gold/50 px-3 py-1.5 text-[12px] font-medium text-bone hover:border-gold hover:bg-gold/10"
+                  className="inline-flex items-center gap-2 rounded border border-accent/50 px-3 py-1.5 text-[12px] font-medium text-bone hover:border-accent hover:bg-accent/10"
                 >
                   <RotateCcw size={13} aria-hidden="true" /> Retry
                 </button>
