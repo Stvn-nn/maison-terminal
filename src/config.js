@@ -25,8 +25,14 @@ export function buildWebSocketUrl(httpBaseUrl = ENGINE_HTTP_URL) {
 
 export const ENGINE_SOCKET_URL = buildWebSocketUrl()
 
-/** Exact command to start the service, shown in offline states. */
+/** Exact command to start the service by hand (browser preview / development). */
 export const ENGINE_START_COMMAND = 'cd python-core && .venv\\Scripts\\python main.py'
+
+/** Where the desktop app writes the bundled engine's output (Tauri app_log_dir on Windows). */
+export const ENGINE_LOG_LOCATION = '%LOCALAPPDATA%\\com.maisonterminal.desktop\\logs\\maison-core.log'
+
+/** A fresh launch shows "Starting engine…" (not "offline") while the bundled engine boots. */
+export const ENGINE_STARTUP_GRACE_MS = 25_000
 
 /** The service's indicator compute endpoint accepts at most this many candles. */
 export const MAX_CANDLES_PER_REQUEST = 20_000

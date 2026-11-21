@@ -22,13 +22,29 @@ src-tauri/      Tauri v2 shell (window only), capabilities, icons, NSIS bundle c
 |---|---|
 | Window, title bar, taskbar identity | Tauri shell (`src-tauri/`) |
 | Indicators, calendar, sizing, screen vision | Python service (`python-core/`, port 8000) |
-| Python process lifecycle | **You** — the service runs on its own; the app never starts or stops it |
+| Engine process lifecycle | Tauri shell (`src-tauri/src/engine.rs`) — see below |
 
-The app connects to `http://127.0.0.1:8000` and `ws://127.0.0.1:8000/ws`. If the service is
-not running, the title bar shows **Engine offline · retry in Ns**, data panels keep their last
-good values marked as stale, and everything recovers automatically once the service starts —
-no app restart needed. `127.0.0.1` is used instead of `localhost` because Windows can resolve
-`localhost` to IPv6 `::1`, which the service does not listen on.
+### The engine starts with the app
+
+The installer ships the Python service as a standalone program (`maison-core.exe`, packaged
+with PyInstaller — no Python installation needed). When Maison Terminal opens:
+
+1. If a healthy engine already answers on `127.0.0.1:8000` (for example one you started with
+   `python main.py`), the app uses it and never touches it.
+2. Otherwise it starts the bundled engine in the background (no console window). The title bar
+   shows **Starting engine…** for the few seconds it takes to boot, then **Engine connected**.
+3. When you close the app, it stops the engine **only if it started it**.
+
+| File | Location |
+|---|---|
+| Engine log | `%LOCALAPPDATA%\com.maisonterminal.desktop\logs\maison-core.log` |
+| Engine settings (`.env`, e.g. `FINNHUB_API_KEY=...`) | `%APPDATA%\com.maisonterminal.desktop\.env` |
+
+The app connects to `http://127.0.0.1:8000` and `ws://127.0.0.1:8000/ws`. If the engine goes
+away, the title bar shows **Engine offline · retry in Ns**, data panels keep their last good
+values marked as stale, and everything recovers automatically when it is back — no app restart
+needed. `127.0.0.1` is used instead of `localhost` because Windows can resolve `localhost` to
+IPv6 `::1`, which the service does not listen on.
 
 ## Verified backend contract
 
@@ -41,16 +57,20 @@ no app restart needed. `127.0.0.1` is used instead of `localhost` because Window
 | Screen vision | `ws://…/ws` — no subscription message | `BACKTRACK_REQUIRED` shows the banner; the documented `BACKTRACK_CLEARED` hides it. Dismissing is local only (the service defines no acknowledgement). |
 | Chart-watch state | `GET /api/v1/vision/status` + `VISION_STATUS` events | Alerts only arrive after the watch is configured and started on the service (`PUT /api/v1/vision/config`, `POST /api/v1/vision/start`); the desktop UI does not yet expose region selection. |
 
-Full service contract: `docs/API_CONTRACT.md` on the `feature/backend-core` branch.
+Full service contract: [`docs/API_CONTRACT.md`](API_CONTRACT.md).
 
-## Prerequisites
+## Prerequisites (development only)
+
+End users only need the installer. For development:
 
 - Windows 10/11 with WebView2 (built into Windows 11)
 - Node.js 20+ and npm
 - Rust (stable, 1.90+) with the MSVC toolchain — only for `tauri dev` / `tauri build`
 - The Python service from `python-core/` (Python 3.11–3.13)
 
-## Run
+## Run in development
+
+In development there is no bundled engine, so start the service yourself; the app finds it.
 
 **1. Start the Python service** (separate terminal, from the repository root):
 
@@ -93,9 +113,12 @@ cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings
 
 ### In CI (recommended)
 
-`.github/workflows/desktop-installer.yml` builds the installer on a GitHub-hosted Windows runner
-(lint → tests → `tauri build`) whenever desktop files change on `feature/frontend-ui`, or on
-demand from the Actions tab (**Desktop installer (Windows) → Run workflow**). Download it with:
+`.github/workflows/desktop-installer.yml` builds the self-contained installer on a GitHub-hosted
+Windows runner: engine tests → package the engine (`scripts/build-engine.ps1`) → smoke-test the
+packaged engine over HTTP → frontend lint and tests → `tauri build` with the engine bundled
+(`src-tauri/tauri.engine.conf.json`). It runs on pushes to `main` and feature branches, on pull
+requests to `main`, or on demand from the Actions tab (**Desktop installer (Windows) → Run
+workflow**). Download the latest installer with:
 
 ```bash
 gh run download --name maison-terminal-windows-installer --dir installer
@@ -107,9 +130,19 @@ Requires the Microsoft C++ Build Tools ("Desktop development with C++"). On mach
 **Smart App Control** enforced, Windows blocks the unsigned helper programs a Rust build runs,
 so local builds fail there; use CI instead.
 
+Package the engine first (needs `pip install -r python-core/requirements.txt pyinstaller`),
+then build the installer with it bundled:
+
 ```bash
-npm run tauri build
+./scripts/build-engine.ps1
 ```
+
+```bash
+npm run tauri build -- --config src-tauri/tauri.engine.conf.json
+```
+
+A plain `npm run tauri build` produces an installer **without** the engine; that app then
+expects a separately started service.
 
 The installer is written to:
 

@@ -1,9 +1,10 @@
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { ENGINE_START_COMMAND } from '../config.js'
 import { useEconomicCalendar } from '../hooks/useEconomicCalendar.js'
 import { cn } from '../lib/cn.js'
+import EngineStartHint from './EngineStartHint.jsx'
+import SegmentedControl from './SegmentedControl.jsx'
 import {
   formatClockTime,
   formatCountdown,
@@ -19,9 +20,9 @@ const IMPACT_PRESENTATION = {
 }
 
 const IMPACT_FILTERS = [
-  { value: 'high', label: 'High' },
-  { value: 'medium', label: 'Med+' },
-  { value: 'low', label: 'All' },
+  { value: 'high', label: 'High', description: 'High-impact releases only' },
+  { value: 'medium', label: 'Med+', description: 'Medium- and high-impact releases' },
+  { value: 'low', label: 'All', description: 'All releases, including low impact' },
 ]
 
 const UNAVAILABLE_REASONS = {
@@ -126,9 +127,7 @@ export default function CatalystFeed() {
         <span aria-hidden="true">·</span>
         <span>{describeFeedError(calendar.error)}</span>
         {calendar.error?.code === 'engine_unreachable' && (
-          <code className="rounded bg-surface-raised px-1.5 py-px text-[11px] text-bone/80" data-selectable>
-            {ENGINE_START_COMMAND}
-          </code>
+          <EngineStartHint />
         )}
       </p>
     )
@@ -191,23 +190,13 @@ export default function CatalystFeed() {
       )}
 
       <div className="flex h-full shrink-0 items-center gap-3 border-l border-divider px-3">
-        <div role="radiogroup" aria-label="Minimum impact" className="flex rounded border border-divider p-0.5">
-          {IMPACT_FILTERS.map((impactFilter) => (
-            <button
-              key={impactFilter.value}
-              type="button"
-              role="radio"
-              aria-checked={minimumImpact === impactFilter.value}
-              onClick={() => setMinimumImpact(impactFilter.value)}
-              className={cn(
-                'rounded-sm px-2 py-0.5 text-[11px]',
-                minimumImpact === impactFilter.value ? 'bg-surface-raised text-bone' : 'text-muted hover:text-bone',
-              )}
-            >
-              {impactFilter.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          label="Impact"
+          labelPlacement="inline"
+          options={IMPACT_FILTERS}
+          value={minimumImpact}
+          onChange={setMinimumImpact}
+        />
         <div className="flex min-w-[6.5rem] flex-col items-end text-[10px] leading-tight">
           {calendar.isStale ? (
             <span className="font-medium text-caution" title={describeFeedError(calendar.error)}>
