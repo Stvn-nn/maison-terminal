@@ -10,12 +10,13 @@ import {
 } from 'lightweight-charts'
 import { useEffect, useMemo, useRef } from 'react'
 
-import { ENGINE_START_COMMAND, MAX_CANDLES_PER_REQUEST } from '../config.js'
+import { MAX_CANDLES_PER_REQUEST } from '../config.js'
 import { useIndicatorWorkspace } from '../hooks/useIndicatorWorkspace.js'
 import { useTerminalSocket } from '../hooks/useTerminalSocket.js'
 import { CandleFileError } from '../lib/candles.js'
 import { cn } from '../lib/cn.js'
 import { formatClockTime } from '../lib/format.js'
+import EngineStartHint from './EngineStartHint.jsx'
 
 const PALETTE = {
   obsidian: '#0D0D0E',
@@ -436,9 +437,7 @@ export default function ChartCanvas() {
               {describeWorkspaceError(workspace.error)}
             </p>
             {workspace.error?.code === 'engine_unreachable' && (
-              <code className="rounded bg-surface-raised px-2 py-1 text-[11px] text-bone/80" data-selectable>
-                {ENGINE_START_COMMAND}
-              </code>
+              <EngineStartHint />
             )}
             <div className="flex items-center gap-2">
               {canRetryFailure && (

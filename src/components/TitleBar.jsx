@@ -1,6 +1,7 @@
 import { Copy, Minus, Square, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { ENGINE_STARTUP_GRACE_MS } from '../config.js'
 import { useNativeWindow } from '../hooks/useNativeWindow.js'
 import { useTerminalSocket } from '../hooks/useTerminalSocket.js'
 import { useVisionStatus } from '../hooks/useVisionStatus.js'
@@ -24,11 +25,25 @@ function useSecondsUntil(targetDate) {
   return targetDate ? Math.max(0, Math.ceil((targetDate.getTime() - currentTime) / 1000)) : null
 }
 
-function EngineStatus() {
-  const { connectionState, nextRetryAt, reconnectNow } = useTerminalSocket()
-  const secondsUntilRetry = useSecondsUntil(nextRetryAt)
+/** True for the first moments after launch, while the bundled engine is still booting. */
+function useIsWithinStartupGrace() {
+  const [isWithinStartupGrace, setIsWithinStartupGrace] = useState(true)
+  useEffect(() => {
+    const graceTimer = setTimeout(() => setIsWithinStartupGrace(false), ENGINE_STARTUP_GRACE_MS)
+    return () => clearTimeout(graceTimer)
+  }, [])
+  return isWithinStartupGrace
+}
 
-  const statusPresentation = {
+function EngineStatus() {
+  const { connectionState, lastConnectedAt, nextRetryAt, reconnectNow } = useTerminalSocket()
+  const secondsUntilRetry = useSecondsUntil(nextRetryAt)
+  const isWithinStartupGrace = useIsWithinStartupGrace()
+  const isStillStarting = connectionState !== 'connected' && lastConnectedAt === null && isWithinStartupGrace
+
+  const statusPresentation = isStillStarting
+    ? { label: 'Starting engine…', dotClass: 'bg-accent animate-pulse-soft' }
+    : {
     connected: { label: 'Engine connected', dotClass: 'bg-gain' },
     connecting: { label: 'Connecting to engine…', dotClass: 'bg-accent animate-pulse-soft' },
     reconnecting: {
@@ -46,7 +61,7 @@ function EngineStatus() {
     <div className="flex items-center gap-2" role="status" aria-live="polite">
       <span aria-hidden="true" className={cn('size-1.5 rounded-full', statusPresentation.dotClass)} />
       <span className="text-[11px] tracking-wide text-muted tabular-figures">{statusPresentation.label}</span>
-      {connectionState === 'reconnecting' && (
+      {connectionState === 'reconnecting' && !isStillStarting && (
         <button
           type="button"
           onClick={reconnectNow}

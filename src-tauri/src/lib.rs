@@ -1,10 +1,13 @@
 //! Maison Terminal desktop shell.
 //!
-//! The shell owns only the window. The Python analytical service (python-core) runs as its
-//! own process on 127.0.0.1:8000; the web UI connects to it directly and recovers when the
-//! service starts late, so this binary never spawns or terminates Python.
+//! The shell owns the window and the lifecycle of the bundled analytical engine
+//! (see `engine.rs`). The web UI talks to the engine directly on 127.0.0.1:8000 and keeps
+//! retrying until it answers, so a slow engine start never blocks the window.
 
-use tauri::{LogicalSize, Manager, WebviewWindow};
+mod engine;
+
+use engine::EngineSupervisor;
+use tauri::{LogicalSize, Manager, RunEvent, WebviewWindow};
 
 const PREFERRED_LOGICAL_WIDTH: f64 = 1360.0;
 const PREFERRED_LOGICAL_HEIGHT: f64 = 860.0;
@@ -40,7 +43,8 @@ fn fit_window_to_work_area(window: &WebviewWindow) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let application = tauri::Builder::default()
+        .manage(EngineSupervisor::default())
         .setup(|app| {
             if let Some(main_window) = app.get_webview_window("main") {
                 if let Err(sizing_error) = fit_window_to_work_area(&main_window) {
@@ -50,8 +54,21 @@ pub fn run() {
                 main_window.show()?;
                 main_window.set_focus()?;
             }
+            // Start (or reuse) the engine off the main thread so the window appears at once.
+            let engine_app_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                engine_app_handle
+                    .state::<EngineSupervisor>()
+                    .start_if_needed(&engine_app_handle);
+            });
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("Maison Terminal failed to start");
+
+    application.run(|app_handle, run_event| {
+        if let RunEvent::Exit = run_event {
+            app_handle.state::<EngineSupervisor>().stop_owned_engine();
+        }
+    });
 }

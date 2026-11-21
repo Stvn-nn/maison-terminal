@@ -1,7 +1,6 @@
 import { ChevronRight, LoaderCircle, Scale } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 
-import { ENGINE_START_COMMAND } from '../config.js'
 import { sizingRequestKey, usePositionSizing } from '../hooks/usePositionSizing.js'
 import { cn } from '../lib/cn.js'
 import { formatCurrency, formatPercentPoints, formatPrice, formatQuantity } from '../lib/format.js'
@@ -13,6 +12,7 @@ import {
   fieldsForMode,
   mapEngineErrorToFields,
 } from '../lib/sizingForm.js'
+import EngineStartHint from './EngineStartHint.jsx'
 
 const DRAWER_OPEN_STORAGE_KEY = 'maison.sizingDrawer.open'
 
@@ -257,9 +257,7 @@ export default function SizingDrawer() {
               <div role="alert" className="rounded border border-loss/40 bg-loss/10 px-3 py-2 text-[12px] text-bone">
                 {serviceErrors.formError.message}
                 {serviceErrors.formError.code === 'engine_unreachable' && (
-                  <code className="mt-1.5 block text-[11px] text-bone/75" data-selectable>
-                    {ENGINE_START_COMMAND}
-                  </code>
+                  <EngineStartHint className="mt-1.5 block" />
                 )}
               </div>
             )}

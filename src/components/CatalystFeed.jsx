@@ -1,9 +1,9 @@
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { ENGINE_START_COMMAND } from '../config.js'
 import { useEconomicCalendar } from '../hooks/useEconomicCalendar.js'
 import { cn } from '../lib/cn.js'
+import EngineStartHint from './EngineStartHint.jsx'
 import {
   formatClockTime,
   formatCountdown,
@@ -126,9 +126,7 @@ export default function CatalystFeed() {
         <span aria-hidden="true">·</span>
         <span>{describeFeedError(calendar.error)}</span>
         {calendar.error?.code === 'engine_unreachable' && (
-          <code className="rounded bg-surface-raised px-1.5 py-px text-[11px] text-bone/80" data-selectable>
-            {ENGINE_START_COMMAND}
-          </code>
+          <EngineStartHint />
         )}
       </p>
     )
