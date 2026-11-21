@@ -1,0 +1,23 @@
+# Node / Vite
+node_modules/
+dist/
+coverage/
+*.local
+
+# Tauri / Rust build output
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Python sidecar local state (python-core/ itself is tracked on its own branch)
+python-core/.venv/
+python-core/.env
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
