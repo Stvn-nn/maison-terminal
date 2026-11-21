@@ -1,0 +1,27 @@
+[package]
+name = "maison-terminal"
+version = "0.1.0"
+description = "Maison Terminal desktop workspace"
+authors = ["Maison Terminal"]
+license = ""
+repository = ""
+edition = "2024"
+rust-version = "1.90"
+
+[lib]
+# The `_lib` suffix avoids a name clash with the binary target on Windows.
+name = "maison_terminal_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.6", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.7", features = [] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
