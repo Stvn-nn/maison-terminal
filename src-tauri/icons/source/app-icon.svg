@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Maison Terminal monogram: gold "M" on obsidian. Source for `npx tauri icon`. -->
+  <rect width="1024" height="1024" rx="224" fill="#0D0D0E"/>
+  <rect x="60" y="60" width="904" height="904" rx="176" fill="none" stroke="#D4AF37" stroke-opacity="0.4" stroke-width="8"/>
+  <path d="M300 716 V318 L512 604 L724 318 V716" fill="none" stroke="#D4AF37" stroke-width="44" stroke-linejoin="miter" stroke-miterlimit="10"/>
+  <path d="M244 716 H356 M668 716 H780 M262 318 H322 M702 318 H762" stroke="#D4AF37" stroke-width="18"/>
+  <path d="M300 800 H724" stroke="#F4F4F6" stroke-opacity="0.55" stroke-width="6"/>
+</svg>
