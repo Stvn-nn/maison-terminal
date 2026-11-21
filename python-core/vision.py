@@ -66,7 +66,8 @@ from ws import WebSocketBroadcaster
 logger = logging.getLogger("maison.vision")
 
 # --- Tunables -------------------------------------------------------------------------
-BACKGROUND_COLOR_DISTANCE = 40.0  # BGR distance that counts as "not background"
+BACKGROUND_COLOR_DISTANCE = 40  # BGR distance that counts as "not background"
+BACKGROUND_SAMPLE_STEP = 4  # sample every 4th pixel per axis when estimating the background
 AXIS_LINE_MIN_FILL = 0.90  # a separator line covers >= 90% of the image span
 SEPARATOR_MAX_SATURATION = 40  # axis separators are grey; coloured lines are price lines
 AXIS_SEARCH_FRACTION_RIGHT = 0.40  # price axis separator searched in the right 40%
@@ -165,17 +166,29 @@ def decode_image(image_base64: str) -> np.ndarray:
 
 
 def estimate_background_color(image: np.ndarray) -> np.ndarray:
-    """Most common colour after coarse quantisation (robust to candles and grid lines)."""
-    quantised = (image // 16).reshape(-1, 3).astype(np.int32)
+    """Most common colour after coarse quantisation (robust to candles and grid lines).
+
+    The background dominates any chart, so a sparse grid of pixels finds it just as reliably
+    as every pixel and keeps this cheap on large (4K-class) captures.
+    """
+    sample_step = BACKGROUND_SAMPLE_STEP if image.shape[0] * image.shape[1] > 250_000 else 1
+    sampled_pixels = image[::sample_step, ::sample_step].reshape(-1, 3)
+    quantised = (sampled_pixels // 16).astype(np.int32)
     bin_codes = quantised[:, 0] * 256 + quantised[:, 1] * 16 + quantised[:, 2]
     dominant_code = np.bincount(bin_codes).argmax()
-    dominant_pixels = image.reshape(-1, 3)[bin_codes == dominant_code]
+    dominant_pixels = sampled_pixels[bin_codes == dominant_code]
     return dominant_pixels.mean(axis=0)
 
 
 def foreground_mask(image: np.ndarray, background_color: np.ndarray) -> np.ndarray:
-    color_distance = np.linalg.norm(image.astype(np.float32) - background_color, axis=2)
-    return color_distance > BACKGROUND_COLOR_DISTANCE
+    """Pixels whose colour differs from the background by more than the threshold.
+
+    Compares squared distances in int32 (no float conversion or square root): same result,
+    several times faster on full-screen captures.
+    """
+    channel_differences = image.astype(np.int32) - background_color.astype(np.int32)
+    squared_distance = np.einsum("ijk,ijk->ij", channel_differences, channel_differences)
+    return squared_distance > BACKGROUND_COLOR_DISTANCE**2
 
 
 def _line_positions(fill_ratios: np.ndarray, search_start: int, search_stop: int) -> list[int]:
@@ -257,18 +270,22 @@ def _remove_lines_and_labels(candle_mask: np.ndarray) -> np.ndarray:
     component_count, component_labels, component_stats, _ = cv2.connectedComponentsWithStats(
         cleaned_mask.astype(np.uint8), connectivity=8
     )
-    for component_index in range(1, component_count):
-        component_width = component_stats[component_index, cv2.CC_STAT_WIDTH]
-        component_height = component_stats[component_index, cv2.CC_STAT_HEIGHT]
-        component_area = component_stats[component_index, cv2.CC_STAT_AREA]
-        is_speck = component_area < MIN_SPECK_AREA
-        is_label_or_line = (
-            component_width >= max(12, LABEL_MIN_WIDTH_FRACTION * plot_width)
-            and component_height <= LABEL_MAX_HEIGHT_FRACTION * plot_height
-            and component_width >= LABEL_MIN_ASPECT * component_height
-        )
-        if is_speck or is_label_or_line:
-            cleaned_mask[component_labels == component_index] = False
+    # Classify every component at once, then clear them all in a single lookup pass.
+    # (Clearing one component at a time rescans the whole image per component, which took
+    # seconds on real broker charts with 1,000+ text and grid fragments.)
+    component_widths = component_stats[:, cv2.CC_STAT_WIDTH]
+    component_heights = component_stats[:, cv2.CC_STAT_HEIGHT]
+    component_areas = component_stats[:, cv2.CC_STAT_AREA]
+    is_speck = component_areas < MIN_SPECK_AREA
+    is_label_or_line = (
+        (component_widths >= max(12, LABEL_MIN_WIDTH_FRACTION * plot_width))
+        & (component_heights <= LABEL_MAX_HEIGHT_FRACTION * plot_height)
+        & (component_widths >= LABEL_MIN_ASPECT * component_heights)
+    )
+    should_remove_component = is_speck | is_label_or_line
+    should_remove_component[0] = False  # label 0 is the background
+    if component_count > 1 and should_remove_component.any():
+        cleaned_mask[should_remove_component[component_labels]] = False
     return cleaned_mask
 
 
