@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 import indicators
+import vision
 from config import Settings, finnhub_key, get_settings
 from errors import ApiError
 from schemas import HealthResponse, SizingRequest, SizingResponse, WsClientMessage, WsEventType
@@ -69,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             yield
         finally:
+            await app.state.vision_service.shutdown()
             for task in background_tasks:
                 task.cancel()
             for task in background_tasks:
@@ -83,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = app_settings
     app.state.broadcaster = WebSocketBroadcaster()
+    app.state.vision_service = vision.VisionService(app_settings, app.state.broadcaster)
 
     app.add_middleware(
         CORSMiddleware,
@@ -94,6 +97,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     _register_error_handlers(app)
     _register_core_routes(app)
     app.include_router(indicators.build_router(require_api_token))
+    app.include_router(vision.build_router(require_api_token))
     _register_websocket(app)
     return app
 
