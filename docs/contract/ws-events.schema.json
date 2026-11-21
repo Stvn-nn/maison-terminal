@@ -1,0 +1,464 @@
+{
+  "$defs": {
+    "BacktrackEventData": {
+      "properties": {
+        "chart_bounds": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PixelRect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "data_left_x": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Data Left X"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "reasons",
+        "confidence",
+        "data_left_x",
+        "chart_bounds"
+      ],
+      "title": "BacktrackEventData",
+      "type": "object"
+    },
+    "EconomicEvent": {
+      "properties": {
+        "actual": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Actual"
+        },
+        "country": {
+          "title": "Country",
+          "type": "string"
+        },
+        "estimate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Estimate"
+        },
+        "event": {
+          "title": "Event",
+          "type": "string"
+        },
+        "id": {
+          "description": "Stable hash of country + event + time.",
+          "title": "Id",
+          "type": "string"
+        },
+        "impact": {
+          "$ref": "#/$defs/ImpactLevel"
+        },
+        "previous": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previous"
+        },
+        "time": {
+          "description": "Release time, UTC.",
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unit"
+        }
+      },
+      "required": [
+        "id",
+        "time",
+        "country",
+        "event",
+        "impact",
+        "actual",
+        "estimate",
+        "previous",
+        "unit"
+      ],
+      "title": "EconomicEvent",
+      "type": "object"
+    },
+    "HeadlineSentiment": {
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/SentimentLabel"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Score",
+          "type": "number"
+        },
+        "source": {
+          "const": "lexicon",
+          "default": "lexicon",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "score",
+        "label"
+      ],
+      "title": "HeadlineSentiment",
+      "type": "object"
+    },
+    "HelloEventData": {
+      "properties": {
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "title": "HelloEventData",
+      "type": "object"
+    },
+    "ImpactLevel": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "ImpactLevel",
+      "type": "string"
+    },
+    "MacroEventUpcomingData": {
+      "properties": {
+        "event": {
+          "$ref": "#/$defs/EconomicEvent"
+        },
+        "minutes_until": {
+          "title": "Minutes Until",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event",
+        "minutes_until"
+      ],
+      "title": "MacroEventUpcomingData",
+      "type": "object"
+    },
+    "NewsFlashData": {
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/NewsItem"
+        }
+      },
+      "required": [
+        "item"
+      ],
+      "title": "NewsFlashData",
+      "type": "object"
+    },
+    "NewsItem": {
+      "properties": {
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "headline": {
+          "title": "Headline",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "image": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Image"
+        },
+        "published_at": {
+          "format": "date-time",
+          "title": "Published At",
+          "type": "string"
+        },
+        "related": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Related",
+          "type": "array"
+        },
+        "sentiment": {
+          "$ref": "#/$defs/HeadlineSentiment"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "published_at",
+        "headline",
+        "summary",
+        "source",
+        "url",
+        "category",
+        "related",
+        "image",
+        "sentiment"
+      ],
+      "title": "NewsItem",
+      "type": "object"
+    },
+    "PixelRect": {
+      "properties": {
+        "height": {
+          "title": "Height",
+          "type": "integer"
+        },
+        "width": {
+          "title": "Width",
+          "type": "integer"
+        },
+        "x": {
+          "title": "X",
+          "type": "integer"
+        },
+        "y": {
+          "title": "Y",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "title": "PixelRect",
+      "type": "object"
+    },
+    "SentimentLabel": {
+      "enum": [
+        "bullish",
+        "bearish",
+        "neutral"
+      ],
+      "title": "SentimentLabel",
+      "type": "string"
+    },
+    "VisionStatusEventData": {
+      "properties": {
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "running": {
+          "title": "Running",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "running"
+      ],
+      "title": "VisionStatusEventData",
+      "type": "object"
+    },
+    "WsClientMessage": {
+      "additionalProperties": false,
+      "description": "Client-to-server frame. Only ``{\"action\": \"ping\"}`` is supported today.",
+      "properties": {
+        "action": {
+          "const": "ping",
+          "title": "Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "WsClientMessage",
+      "type": "object"
+    },
+    "WsEvent": {
+      "description": "Envelope for every server-to-client WebSocket frame.\n\n``event`` and ``message`` are always present; ``ts`` and ``data`` are additive.",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data"
+        },
+        "event": {
+          "$ref": "#/$defs/WsEventType"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event",
+        "message",
+        "ts"
+      ],
+      "title": "WsEvent",
+      "type": "object"
+    },
+    "WsEventType": {
+      "enum": [
+        "HELLO",
+        "HEARTBEAT",
+        "PONG",
+        "ERROR",
+        "BACKTRACK_REQUIRED",
+        "BACKTRACK_CLEARED",
+        "VISION_STATUS",
+        "MACRO_EVENT_UPCOMING",
+        "NEWS_FLASH"
+      ],
+      "title": "WsEventType",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "client_message": {
+    "$ref": "#/$defs/WsClientMessage"
+  },
+  "description": "Connect to ws://127.0.0.1:8000/ws (append ?token=<token> when MT_AUTH_TOKEN is set). Every server frame is a WsEvent envelope. `event` and `message` are always present; `ts` (UTC ISO-8601) and `data` are additive.",
+  "envelope": {
+    "$ref": "#/$defs/WsEvent"
+  },
+  "events": {
+    "BACKTRACK_CLEARED": {
+      "data": {
+        "$ref": "#/$defs/BacktrackEventData"
+      },
+      "fixed_message": "Chart structure visible"
+    },
+    "BACKTRACK_REQUIRED": {
+      "data": {
+        "$ref": "#/$defs/BacktrackEventData"
+      },
+      "fixed_message": "Historical Context Needed: Please scroll back on your trading chart"
+    },
+    "ERROR": {
+      "data": null,
+      "fixed_message": null
+    },
+    "HEARTBEAT": {
+      "data": null,
+      "fixed_message": "alive"
+    },
+    "HELLO": {
+      "data": {
+        "$ref": "#/$defs/HelloEventData"
+      },
+      "fixed_message": null
+    },
+    "MACRO_EVENT_UPCOMING": {
+      "data": {
+        "$ref": "#/$defs/MacroEventUpcomingData"
+      },
+      "fixed_message": null
+    },
+    "NEWS_FLASH": {
+      "data": {
+        "$ref": "#/$defs/NewsFlashData"
+      },
+      "fixed_message": null
+    },
+    "PONG": {
+      "data": null,
+      "fixed_message": "pong"
+    },
+    "VISION_STATUS": {
+      "data": {
+        "$ref": "#/$defs/VisionStatusEventData"
+      },
+      "fixed_message": null
+    }
+  },
+  "title": "Maison Terminal WebSocket contract"
+}
