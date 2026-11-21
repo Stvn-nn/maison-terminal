@@ -318,7 +318,10 @@ export default function ChartCanvas() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-11 shrink-0 items-center gap-4 border-b border-divider px-4">
         <div className="flex min-w-0 items-baseline gap-2">
-          <h1 className="font-serif text-[17px] leading-none font-semibold whitespace-nowrap text-bone">
+          <h1
+            className="max-w-[18rem] truncate font-serif text-[17px] leading-none font-semibold text-bone"
+            title={workspace.sourceName ?? undefined}
+          >
             {workspace.sourceName ?? 'Chart'}
           </h1>
           {fileNotice && hasChartData && (

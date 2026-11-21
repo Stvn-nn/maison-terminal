@@ -60,7 +60,9 @@ function EngineStatus() {
 }
 
 function VisionStatusLabel() {
-  const { state } = useVisionStatus()
+  const { state: reportedState } = useVisionStatus()
+  const { isConnected } = useTerminalSocket()
+  const state = isConnected ? reportedState : 'unknown' // never show a stale watch state
   return (
     <span className={cn('text-[11px] tracking-wide', state === 'backtrack_required' ? 'text-gold' : 'text-muted')}>
       {VISION_STATE_LABELS[state] ?? VISION_STATE_LABELS.unknown}

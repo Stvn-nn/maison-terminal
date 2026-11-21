@@ -57,6 +57,7 @@ function NumberField({ formField, value, onChange, error, isOptional }) {
         <span className="text-bone/90">
           {definition.label}
           {isOptional && <span className="text-muted"> (optional)</span>}
+          <span className="sr-only">, </span>
         </span>
         <span>{definition.unit}</span>
       </label>
@@ -94,7 +95,7 @@ function NumberField({ formField, value, onChange, error, isOptional }) {
 function ResultCard({ label, value, emphasis = false }) {
   return (
     <div className="flex flex-col gap-1 rounded border border-divider bg-obsidian px-3 py-2.5">
-      <span className="text-[10px] tracking-[0.14em] text-muted uppercase">{label}</span>
+      <span className="text-[10px] tracking-[0.08em] whitespace-nowrap text-muted uppercase">{label}</span>
       <span className={cn('tabular-figures', emphasis ? 'text-[20px] font-medium text-bone' : 'text-[15px] text-bone')}>
         {value}
       </span>
@@ -275,16 +276,29 @@ export default function SizingDrawer() {
                   <ResultCard label="Risk of equity" value={formatPercentPoints(sizingResult.risk_pct_of_equity)} />
                 </div>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[11px]" data-selectable>
-                  <dt className="text-muted">Direction</dt>
-                  <dd className="text-right text-bone capitalize">{sizingResult.side ?? '—'}</dd>
-                  <dt className="text-muted">Stop distance</dt>
-                  <dd className="text-right text-bone tabular-figures">
-                    {formatPrice(sizingResult.stop_distance)} ({formatPercentPoints(sizingResult.stop_distance_pct)})
-                  </dd>
-                  <dt className="text-muted">Notional of equity</dt>
-                  <dd className="text-right text-bone tabular-figures">
-                    {formatPercentPoints(sizingResult.notional_pct_of_equity)}
-                  </dd>
+                  {/* Rows appear only for values the service returned (null = not applicable). */}
+                  {sizingResult.side !== null && (
+                    <>
+                      <dt className="text-muted">Direction</dt>
+                      <dd className="text-right text-bone capitalize">{sizingResult.side}</dd>
+                    </>
+                  )}
+                  {sizingResult.stop_distance !== null && (
+                    <>
+                      <dt className="text-muted">Stop distance</dt>
+                      <dd className="text-right text-bone tabular-figures">
+                        {formatPrice(sizingResult.stop_distance)} ({formatPercentPoints(sizingResult.stop_distance_pct)})
+                      </dd>
+                    </>
+                  )}
+                  {sizingResult.notional_pct_of_equity !== null && (
+                    <>
+                      <dt className="text-muted">Notional of equity</dt>
+                      <dd className="text-right text-bone tabular-figures">
+                        {formatPercentPoints(sizingResult.notional_pct_of_equity)}
+                      </dd>
+                    </>
+                  )}
                   {sizingResult.targets.map((target) => (
                     <div key={target.r_multiple} className="contents">
                       <dt className="text-muted">{target.r_multiple}R target</dt>
