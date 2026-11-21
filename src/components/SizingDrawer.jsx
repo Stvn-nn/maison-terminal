@@ -13,6 +13,7 @@ import {
   mapEngineErrorToFields,
 } from '../lib/sizingForm.js'
 import EngineStartHint from './EngineStartHint.jsx'
+import SegmentedControl from './SegmentedControl.jsx'
 
 const DRAWER_OPEN_STORAGE_KEY = 'maison.sizingDrawer.open'
 
@@ -22,28 +23,6 @@ function readStoredDrawerOpen() {
   } catch {
     return true
   }
-}
-
-function SegmentedControl({ label, options, value, onChange }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col rounded border border-divider p-0.5">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          role="radio"
-          aria-checked={value === option.value}
-          onClick={() => onChange(option.value)}
-          className={cn(
-            'rounded-sm px-2 py-1 text-[11px] whitespace-nowrap transition-colors',
-            value === option.value ? 'bg-surface-raised text-bone' : 'text-muted hover:text-bone',
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  )
 }
 
 function NumberField({ formField, value, onChange, error, isOptional }) {
@@ -194,17 +173,24 @@ export default function SizingDrawer() {
             <p className="mt-1.5 text-[11px] text-muted">{SIZING_MODES.find((option) => option.value === mode).summary}</p>
           </header>
 
-          <SegmentedControl label="Sizing mode" options={SIZING_MODES} value={mode} onChange={changeMode} />
+          <SegmentedControl
+            label="Sizing mode"
+            options={SIZING_MODES.map((sizingMode) => ({ ...sizingMode, description: sizingMode.summary }))}
+            value={mode}
+            onChange={changeMode}
+            fillWidth
+          />
 
           {mode === 'risk_to_stop' && (
             <SegmentedControl
               label="Risk basis"
               options={[
-                { value: 'percent', label: '% of equity' },
-                { value: 'cash', label: 'Fixed $ risk' },
+                { value: 'percent', label: '% of equity', description: 'Risk a percentage of account equity' },
+                { value: 'cash', label: 'Fixed $ risk', description: 'Risk a fixed dollar amount' },
               ]}
               value={riskBasis}
               onChange={setRiskBasis}
+              fillWidth
             />
           )}
 
@@ -221,18 +207,18 @@ export default function SizingDrawer() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-end justify-between gap-3">
             <SegmentedControl
-              label="Trade direction"
+              label="Direction"
               options={[
-                { value: 'auto', label: 'Auto' },
-                { value: 'long', label: 'Long' },
-                { value: 'short', label: 'Short' },
+                { value: 'auto', label: 'Auto', description: 'Infer long or short from where the stop sits' },
+                { value: 'long', label: 'Long', description: 'Long trade: stop below entry' },
+                { value: 'short', label: 'Short', description: 'Short trade: stop above entry' },
               ]}
               value={side}
               onChange={setSide}
             />
-            <label className="flex items-center gap-2 text-[11px] whitespace-nowrap text-muted">
+            <label className="flex items-center gap-2 pb-1.5 text-[11px] whitespace-nowrap text-muted">
               <input
                 type="checkbox"
                 checked={allowFractional}
@@ -246,7 +232,7 @@ export default function SizingDrawer() {
 
           <button
             type="submit"
-            className="inline-flex h-9 items-center justify-center gap-2 rounded border border-accent/60 bg-accent/10 text-[12px] font-medium tracking-wide text-bone hover:bg-accent/20"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-accent text-[12px] font-semibold tracking-wide text-obsidian shadow-[0_2px_10px_rgba(106,134,176,0.35)] transition-colors hover:bg-accent-strong"
           >
             {sizing.status === 'pending' && <LoaderCircle size={13} aria-hidden="true" className="motion-safe:animate-spin" />}
             {sizing.status === 'pending' ? 'Calculating…' : 'Calculate'}

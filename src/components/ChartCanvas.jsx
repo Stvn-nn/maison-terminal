@@ -26,7 +26,7 @@ const PALETTE = {
   muted: '#8E8E93',
   gain: '#00C805',
   loss: '#EF4444',
-  accent: '#00C805',
+  accent: '#6A86B0',
 }
 
 /** Series colours keyed by exact column name first, then by column prefix. */
@@ -84,7 +84,7 @@ const BASE_CHART_OPTIONS = {
     fontFamily: '"Inter Variable", "Segoe UI", sans-serif',
     fontSize: 11,
     attributionLogo: true, // required TradingView attribution; do not remove
-    panes: { separatorColor: PALETTE.divider, separatorHoverColor: 'rgba(0, 200, 5, 0.25)' },
+    panes: { separatorColor: PALETTE.divider, separatorHoverColor: 'rgba(106, 134, 176, 0.3)' },
   },
   grid: {
     vertLines: { color: PALETTE.gridLine },
@@ -241,10 +241,10 @@ function OpenFileButton({ onClick, variant = 'primary' }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-2 rounded px-3 py-1.5 text-[12px] font-medium transition-colors',
+        'inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors',
         variant === 'primary'
-          ? 'border border-accent/50 text-bone hover:border-accent hover:bg-accent/10'
-          : 'border border-divider text-muted hover:border-muted hover:text-bone',
+          ? 'bg-accent font-semibold text-obsidian shadow-[0_2px_10px_rgba(106,134,176,0.35)] hover:bg-accent-strong'
+          : 'border border-accent/40 text-bone hover:border-accent hover:bg-accent/15',
       )}
     >
       <FileUp size={13} aria-hidden="true" />
@@ -444,7 +444,7 @@ export default function ChartCanvas() {
                 <button
                   type="button"
                   onClick={workspace.retry}
-                  className="inline-flex items-center gap-2 rounded border border-accent/50 px-3 py-1.5 text-[12px] font-medium text-bone hover:border-accent hover:bg-accent/10"
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-obsidian shadow-[0_2px_10px_rgba(106,134,176,0.35)] hover:bg-accent-strong"
                 >
                   <RotateCcw size={13} aria-hidden="true" /> Retry
                 </button>

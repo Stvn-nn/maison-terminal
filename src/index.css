@@ -18,7 +18,8 @@
   --color-muted: #8e8e93;
   --color-gain: #00c805;
   --color-loss: #ef4444;
-  --color-accent: #00c805; /* Robinhood-style green: brand accent */
+  --color-accent: #6a86b0; /* smoky "classic Batman" blue: brand accent (5.2:1 on obsidian) */
+  --color-accent-strong: #8199bf; /* hover state for filled accent buttons */
   --color-caution: #f97316; /* stale data and warnings: never green */
   --color-impact-high: #ef4444;
   --color-impact-medium: #f97316;
