@@ -206,4 +206,18 @@ export const engineApi = {
   getScreenCandles({ signal } = {}) {
     return requestJson('/api/v1/vision/candles', { signal, timeoutMs: 5_000 })
   },
+
+  /** Type-ahead symbol suggestions (stocks, ETFs, indices, forex, crypto, futures). */
+  searchSymbols(query, { signal } = {}) {
+    return requestJson('/api/v1/market/search', { query: { q: query }, signal, timeoutMs: 8_000 })
+  },
+
+  /** Real OHLC bars for a symbol at a timeframe (1m, 5m, 15m, 30m, 1h, 1d, 1w, 1M). */
+  getMarketCandles({ symbol, timeframe, signal }) {
+    return requestJson('/api/v1/market/candles', {
+      query: { symbol, interval: timeframe },
+      signal,
+      timeoutMs: 12_000,
+    })
+  },
 }

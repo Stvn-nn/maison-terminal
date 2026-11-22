@@ -14,7 +14,9 @@ const EMPTY_STATE = {
   computedAt: null,
   datasetVersion: 0,
   hasRetryInput: false,
-  dataOrigin: null, // 'screen' (read off the user's screen, relative scale) | 'file' (CSV prices)
+  // 'screen' (read off the user's screen, relative scale) | 'market' (live prices) | 'file' (CSV)
+  dataOrigin: null,
+  loadedForSource: null, // which chart source ('screen' | 'pair' | 'file') the data was loaded for
 }
 
 /**
@@ -33,13 +35,13 @@ export function useIndicatorWorkspace() {
   const latestRequestIdRef = useRef(0)
   const inFlightControllerRef = useRef(null)
 
-  const computeSeries = useCallback(async (candles, { sourceName, isNewDataset, dataOrigin }) => {
+  const computeSeries = useCallback(async (candles, { sourceName, isNewDataset, dataOrigin, chartSource }) => {
     latestRequestIdRef.current += 1
     const requestId = latestRequestIdRef.current
     inFlightControllerRef.current?.abort()
     const requestController = new AbortController()
     inFlightControllerRef.current = requestController
-    pendingCandlesRef.current = { candles, sourceName, dataOrigin }
+    pendingCandlesRef.current = { candles, sourceName, dataOrigin, chartSource }
 
     setWorkspaceState((previousState) => ({
       ...previousState,
@@ -60,6 +62,7 @@ export function useIndicatorWorkspace() {
         status: chartData.candles.length > 0 ? 'ready' : 'failed',
         chartData,
         dataOrigin,
+        loadedForSource: chartSource ?? dataOrigin,
         error: chartData.candles.length > 0 ? null : new CandleFileError('The service returned no candles.'),
         computedAt: new Date(),
         datasetVersion: isNewDataset ? previousState.datasetVersion + 1 : previousState.datasetVersion,
@@ -98,16 +101,32 @@ export function useIndicatorWorkspace() {
         sourceName: candleFile.name,
         isNewDataset: true,
         dataOrigin: 'file',
+        chartSource: 'file',
       })
     },
+    [computeSeries],
+  )
+
+  /**
+   * Candles that keep updating: read off the screen (dataOrigin 'screen', relative scale) or
+   * real market prices (dataOrigin 'market'). `chartSource` is the source tab they belong to.
+   */
+  const loadLiveCandles = useCallback(
+    (candles, { isNewDataset, dataOrigin, chartSource, sourceName }) =>
+      computeSeries(candles, { sourceName, isNewDataset, dataOrigin, chartSource }),
     [computeSeries],
   )
 
   /** Candles read from the screen by the chart watch (relative scale, placeholder times). */
   const loadScreenCandles = useCallback(
     (candles, { isNewDataset }) =>
-      computeSeries(candles, { sourceName: 'Your screen', isNewDataset, dataOrigin: 'screen' }),
-    [computeSeries],
+      loadLiveCandles(candles, {
+        sourceName: 'Your screen',
+        isNewDataset,
+        dataOrigin: 'screen',
+        chartSource: 'screen',
+      }),
+    [loadLiveCandles],
   )
 
   const retry = useCallback(() => {
@@ -118,6 +137,7 @@ export function useIndicatorWorkspace() {
       sourceName: pending.sourceName,
       isNewDataset: isFirstLoadOfFile,
       dataOrigin: pending.dataOrigin,
+      chartSource: pending.chartSource,
     })
   }, [computeSeries, workspaceState.chartData])
 
@@ -133,6 +153,7 @@ export function useIndicatorWorkspace() {
     ...workspaceState,
     loadCandleFile,
     loadScreenCandles,
+    loadLiveCandles,
     retry,
     canRetry: workspaceState.hasRetryInput,
   }

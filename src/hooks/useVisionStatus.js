@@ -14,6 +14,7 @@ export function useVisionStatus() {
     running: false,
     lastError: null,
     region: null,
+    isChartInView: true,
   })
 
   const refreshVisionStatus = useCallback(async () => {
@@ -24,6 +25,7 @@ export function useVisionStatus() {
         running: Boolean(statusBody.running),
         lastError: statusBody.last_error ?? null,
         region: statusBody.config?.region ?? null,
+        isChartInView: statusBody.chart_in_view !== false,
       })
     } catch {
       setVisionStatus((previousStatus) => ({ ...previousStatus, state: 'unknown' }))

@@ -60,6 +60,12 @@
     height: 100%;
   }
 
+  /* Off-screen panels (the collapsed drawer in a narrow window) must never let the page
+     scroll sideways when an input is focused or typed into. */
+  #root {
+    overflow: clip;
+  }
+
   html {
     color-scheme: dark;
     -webkit-font-smoothing: antialiased;

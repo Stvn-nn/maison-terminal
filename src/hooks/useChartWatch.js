@@ -93,13 +93,15 @@ export function useChartWatchController() {
   useEffect(() => {
     if (!isAutoWatchEnabled || !isConnected) return undefined
     const checkAndScan = () => {
-      const { running, state, refresh } = latestVisionStatusRef.current
+      const { running, state, isChartInView, refresh } = latestVisionStatusRef.current
       refresh()
       if (!running) {
         scanNow()
         return
       }
-      if (state === 'no_chart') {
+      // A minimised, covered or closed chart window: after a while, look for another chart
+      // (the engine keeps following the original window while it still exists).
+      if (state === 'no_chart' || !isChartInView) {
         noChartSinceRef.current ??= Date.now()
         if (Date.now() - noChartSinceRef.current >= RESCAN_AFTER_NO_CHART_MS) scanNow()
       } else {
@@ -131,6 +133,7 @@ export function useChartWatchController() {
     isWatching: visionStatus.running,
     visionState: visionStatus.state,
     watchedRegion: visionStatus.region,
+    isChartInView: visionStatus.isChartInView,
     scanState,
     scanNow,
     startWatching,
