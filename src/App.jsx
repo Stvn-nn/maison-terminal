@@ -1,6 +1,7 @@
 import BacktrackPrompt from './components/BacktrackPrompt.jsx'
 import CatalystFeed from './components/CatalystFeed.jsx'
 import ChartCanvas from './components/ChartCanvas.jsx'
+import ChartInsightsProvider from './components/ChartInsightsProvider.jsx'
 import ChartWatchProvider from './components/ChartWatchProvider.jsx'
 import SizingDrawer from './components/SizingDrawer.jsx'
 import TitleBar from './components/TitleBar.jsx'
@@ -9,6 +10,7 @@ import TitleBar from './components/TitleBar.jsx'
 export default function App() {
   return (
     <ChartWatchProvider>
+      <ChartInsightsProvider>
       <div className="flex h-full min-h-0 flex-col bg-obsidian text-bone">
         <TitleBar />
         <CatalystFeed />
@@ -20,6 +22,7 @@ export default function App() {
           <SizingDrawer />
         </main>
       </div>
+      </ChartInsightsProvider>
     </ChartWatchProvider>
   )
 }

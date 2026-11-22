@@ -71,7 +71,9 @@ To uninstall, use **Settings → Apps → Installed apps → Maison Terminal →
 | **Chart** | Two sources: **Screen** (default) reads the candles straight off your broker chart, no file needed; **CSV file** loads real prices from a broker export. Shows candles, EMA 9/21/50/200, Bollinger Bands, and RSI and MACD in their own panes, all computed by the engine (pandas-ta). A line under the chart always says where the data came from. |
 | **Python signal** | A combined reading (bullish / bearish / neutral) from five checks. Click it to see what each check found, what it measures, how the score works, and what the reading means for risk. |
 | **Catalyst strip** | Upcoming economic releases from Finnhub, ordered by time and shown in your local time zone. Each has an impact dot (red = high, orange = medium, yellow = low), estimate / previous / actual where available, and a live countdown. Filter by **Impact**: High, Med+ or All. |
-| **Sizing drawer** | Position sizing in three modes. **Risk to stop**: size so hitting your stop loses a set % of equity or a fixed $ amount. **% of equity**: deploy a percentage of your account. **Fixed cash**: deploy a dollar amount. Shows shares, max dollar risk, notional, risk as % of equity, stop distance, 1R/2R/3R targets and warnings, plus a **What this means** section that explains the risk in plain words. |
+| **Sizing drawer** | Position sizing in three modes. **Risk to stop**: size so hitting your stop loses a set % of equity or a fixed $ amount. **% of equity**: deploy a percentage of your account. **Fixed cash**: deploy a dollar amount. Shows shares, max dollar risk, notional, risk as % of equity, stop distance, 1R/2R/3R targets and warnings. |
+| **Insights tab** | Next to **Size** in the drawer. Shows the **market** you're watching (symbol, last price and change read from your chart window's title), the **technical analysis** in use and each indicator's reading, **upcoming releases** for that market's economies (e.g. US for SPX, euro area + US for EURUSD) and what they mean for risk, **news sentiment** for the symbol, and what your **last sizing** risks, each with its source. |
+| **No chart** | When nothing is detected, the chart area shows just the MT logo and *No chart detected*. |
 | **Chart watch** | Starts automatically: the app finds your broker chart on screen (ignoring its own window) and watches it, re-scanning if you move it. When the major swing high or low sits at the left edge, or too few swings are visible, a banner says *"Historical Context Needed: Please scroll back on your trading chart."* The banner hides itself once structure is visible again. |
 | **Status** | The title bar shows engine connection state and chart-watch state. If the engine drops, panels keep their last data marked as stale and reconnect automatically. |
 
@@ -119,9 +121,10 @@ fill in the fields and press **Calculate**.
   to the previous inputs.
 - Errors from the engine (for example a stop on the wrong side of entry) appear under the field
   they belong to.
-- **What this means** explains the result: what you lose if the stop is hit (and as a share of
-  your account), the position's value, what each R target would gain, and how the risk compares
-  with the common 1–2% rule of thumb. It's a sizing aid, not financial advice.
+- Open the **Insights** tab (or click *What it means →* under the result) for a plain-language
+  explanation: what you lose if the stop is hit (and as a share of your account), the
+  position's value, what each R target would gain, and how the risk compares with the common
+  1–2% rule of thumb. It's a sizing aid, not financial advice.
 
 ### Where the data comes from
 

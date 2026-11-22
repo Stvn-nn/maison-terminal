@@ -16,6 +16,8 @@ import {
   SCREEN_BAR_SECONDS,
   SCREEN_TIME_ORIGIN,
 } from '../config.js'
+import maisonLogo from '../assets/maison-logo.png'
+import { useChartInsights } from '../hooks/useChartInsights.js'
 import { useChartWatch } from '../hooks/useChartWatch.js'
 import { useIndicatorWorkspace } from '../hooks/useIndicatorWorkspace.js'
 import { useScreenChart } from '../hooks/useScreenChart.js'
@@ -389,6 +391,35 @@ export default function ChartCanvas() {
     renderedDatasetVersionRef.current = workspace.datasetVersion
   }, [visibleChartData, workspace.datasetVersion, isRelativeScale])
 
+  // Tell the drawer's Insights tab what is on the chart and where it came from.
+  const { setChartInsights } = useChartInsights()
+  const isShowingScreen = chartSource === 'screen'
+  useEffect(() => {
+    setChartInsights({
+      summary: visibleChartData?.summary ?? null,
+      dataOrigin: visibleChartData ? workspace.dataOrigin : null,
+      sourceName: workspace.sourceName,
+      computedAt: workspace.computedAt,
+      candleCount: visibleChartData?.candles.length ?? 0,
+      symbol: isShowingScreen ? screenChart.symbol : null,
+      symbolSource: isShowingScreen && screenChart.symbol ? 'window_title' : null,
+      titleLastPrice: isShowingScreen ? screenChart.titleLastPrice : null,
+      titleChange: isShowingScreen ? screenChart.titleChange : null,
+      titleDirection: isShowingScreen ? screenChart.titleDirection : null,
+    })
+  }, [
+    setChartInsights,
+    visibleChartData,
+    workspace.dataOrigin,
+    workspace.sourceName,
+    workspace.computedAt,
+    isShowingScreen,
+    screenChart.symbol,
+    screenChart.titleLastPrice,
+    screenChart.titleChange,
+    screenChart.titleDirection,
+  ])
+
   const legendEntries = useMemo(() => buildLegendEntries(visibleChartData), [visibleChartData])
   const openFilePicker = () => fileInputRef.current?.click()
   const handleFileChosen = (changeEvent) => {
@@ -498,7 +529,7 @@ export default function ChartCanvas() {
         <div ref={chartContainerRef} className="absolute inset-0" data-testid="chart-container" />
 
         {isScreenSource && !hasChartData && (
-          <ScreenSourceState chartWatch={chartWatch} screenChart={screenChart} onOpenFile={openFilePicker} />
+          <ScreenSourceState chartWatch={chartWatch} screenChart={screenChart} />
         )}
 
         {!isScreenSource && !hasChartData && !isBusy && !showFileFailure && (
@@ -564,64 +595,31 @@ export default function ChartCanvas() {
   )
 }
 
-/** States shown in the chart area while the Screen source has nothing to draw yet. */
-function ScreenSourceState({ chartWatch, screenChart, onOpenFile }) {
-  const fileFallback = <OpenFileButton onClick={onOpenFile} variant="secondary" />
-  if (!chartWatch.isAutoWatchEnabled && !chartWatch.isWatching) {
-    return (
-      <ChartStatePanel icon={<ScanEye size={22} aria-hidden="true" className="text-muted" />} title="Chart watch is off">
-        <p className="text-[13px] leading-relaxed text-muted">
-          Turn it on and Maison Terminal will find your broker chart on screen and read its candles. No file needed.
-        </p>
-        <div className="flex items-center gap-2">
+/** Screen source with nothing to draw: just the MT mark and one line of status. */
+function ScreenSourceState({ chartWatch, screenChart }) {
+  const isOff = !chartWatch.isAutoWatchEnabled && !chartWatch.isWatching
+  let statusLine = 'No chart detected'
+  if (isOff) statusLine = 'Chart watch is off'
+  else if (chartWatch.isWatching && chartWatch.visionState !== 'no_chart') {
+    statusLine = screenChart.status === 'unreadable' ? 'Chart detected · candles can’t be read' : 'Reading chart…'
+  }
+  return (
+    <div className="absolute inset-0 z-10 grid place-items-center bg-obsidian" role="status">
+      <div className="flex flex-col items-center gap-4">
+        <img
+          src={maisonLogo}
+          alt="Maison Terminal"
+          className="size-20 rounded-2xl ring-1 ring-divider"
+          draggable={false}
+        />
+        <p className="font-serif text-[20px] text-bone">{statusLine}</p>
+        {isOff && (
           <button type="button" onClick={chartWatch.startWatching} className={PRIMARY_PILL_CLASS}>
             <ScanEye size={13} aria-hidden="true" /> Turn on chart watch
           </button>
-          {fileFallback}
-        </div>
-      </ChartStatePanel>
-    )
-  }
-  if (!chartWatch.isWatching) {
-    const isNotFound = chartWatch.scanState.phase === 'not_found'
-    return (
-      <ChartStatePanel
-        icon={<ScanEye size={22} aria-hidden="true" className="text-accent motion-safe:animate-pulse-soft" />}
-        title={isNotFound ? 'No chart on screen yet' : 'Looking for your chart…'}
-      >
-        <p className="text-[13px] leading-relaxed text-muted">
-          Open your broker chart (for example TradingView) <span className="text-bone">beside</span> Maison Terminal so
-          both are visible. Charts with green and red candles work best. Maison Terminal checks every few seconds.
-        </p>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={chartWatch.scanNow} className={PRIMARY_PILL_CLASS}>
-            <ScanEye size={13} aria-hidden="true" /> Scan now
-          </button>
-          {fileFallback}
-        </div>
-      </ChartStatePanel>
-    )
-  }
-  if (screenChart.status === 'unreadable') {
-    return (
-      <ChartStatePanel icon={<Info size={22} aria-hidden="true" className="text-caution" />} title="Can’t read the candles">
-        <p className="text-[13px] leading-relaxed text-muted">
-          Your chart is being watched, but its candles can’t be read. Candle reading needs coloured (green and red)
-          candles; hollow or single-colour styles aren’t supported yet. Backtrack alerts still work.
-        </p>
-        {fileFallback}
-      </ChartStatePanel>
-    )
-  }
-  return (
-    <ChartStatePanel
-      icon={<LoaderCircle size={22} aria-hidden="true" className="text-accent motion-safe:animate-spin" />}
-      title="Reading your chart…"
-    >
-      <p className="text-[12px] text-muted" role="status">
-        Found a chart on screen. Reading its candles and computing indicators.
-      </p>
-    </ChartStatePanel>
+        )}
+      </div>
+    </div>
   )
 }
 

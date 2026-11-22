@@ -197,6 +197,11 @@ export const engineApi = {
     return requestJson('/api/v1/vision/stop', { method: 'POST', signal, timeoutMs: 5_000 })
   },
 
+  /** News sentiment for a symbol (Finnhub, or the engine's headline scoring fallback). */
+  getSymbolSentiment(symbol, { signal } = {}) {
+    return requestJson('/api/v1/macro/sentiment', { query: { symbol }, signal })
+  },
+
   /** Candles read from the watched screen region (relative scale, placeholder times). */
   getScreenCandles({ signal } = {}) {
     return requestJson('/api/v1/vision/candles', { signal, timeoutMs: 5_000 })

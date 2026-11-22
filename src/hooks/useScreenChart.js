@@ -20,6 +20,11 @@ const INITIAL_SCREEN_CHART = {
   region: null,
   note: null,
   signature: 'empty',
+  sourceWindowTitle: null,
+  symbol: null,
+  titleLastPrice: null,
+  titleChange: null,
+  titleDirection: null,
 }
 
 /**
@@ -48,6 +53,11 @@ export function useScreenChart({ enabled }) {
           region: responseBody.region,
           note: responseBody.note,
           signature,
+          sourceWindowTitle: responseBody.source_window_title ?? null,
+          symbol: responseBody.symbol ?? null,
+          titleLastPrice: responseBody.title_last_price ?? null,
+          titleChange: responseBody.title_change ?? null,
+          titleDirection: responseBody.title_direction ?? null,
         }))
       } catch (pollError) {
         if (isDisposed || isAbortError(pollError)) return

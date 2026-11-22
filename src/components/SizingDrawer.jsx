@@ -5,7 +5,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery.js'
 import { sizingRequestKey, usePositionSizing } from '../hooks/usePositionSizing.js'
 import { cn } from '../lib/cn.js'
 import { formatClockTime, formatCurrency, formatPercentPoints, formatPrice, formatQuantity } from '../lib/format.js'
-import { explainSizingResult } from '../lib/riskExplanation.js'
+import InsightsPanel from './InsightsPanel.jsx'
 import {
   EMPTY_FORM_VALUES,
   FIELD_DEFINITIONS,
@@ -20,6 +20,10 @@ import SegmentedControl from './SegmentedControl.jsx'
 const DRAWER_OPEN_STORAGE_KEY = 'maison.sizingDrawer.open'
 /** Below this width the open drawer floats over the chart instead of taking space. */
 const NARROW_WINDOW_QUERY = '(max-width: 899px)'
+const DRAWER_TABS = [
+  { value: 'size', label: 'Size' },
+  { value: 'insights', label: 'Insights' },
+]
 
 function readStoredDrawerOpen() {
   try {
@@ -92,6 +96,7 @@ function ResultCard({ label, value, emphasis = false }) {
  */
 export default function SizingDrawer() {
   const [isOpen, setIsOpen] = useState(readStoredDrawerOpen)
+  const [activeTab, setActiveTab] = useState('size')
   const [mode, setMode] = useState('risk_to_stop')
   const [riskBasis, setRiskBasis] = useState('percent')
   const [side, setSide] = useState('auto')
@@ -184,7 +189,36 @@ export default function SizingDrawer() {
         inert={!isOpen}
         className={cn('scrollbar-quiet min-w-0 flex-1 overflow-y-auto', !isOpen && 'invisible')}
       >
-        <form onSubmit={submitSizing} noValidate className="flex flex-col gap-4 p-4">
+        <div
+          role="tablist"
+          aria-label="Drawer view"
+          className="sticky top-0 z-10 flex gap-1 border-b border-divider bg-surface px-4 pt-3 pb-2"
+        >
+          {DRAWER_TABS.map((drawerTab) => (
+            <button
+              key={drawerTab.value}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === drawerTab.value}
+              onClick={() => setActiveTab(drawerTab.value)}
+              className={cn(
+                'rounded-full px-3.5 py-1 text-[12px] transition-colors',
+                activeTab === drawerTab.value
+                  ? 'bg-accent font-semibold text-obsidian'
+                  : 'text-muted hover:bg-surface-raised hover:text-bone',
+              )}
+            >
+              {drawerTab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'insights' ? (
+          <div role="tabpanel" aria-label="Insights" className="p-4">
+            <InsightsPanel sizingResult={sizing.result} />
+          </div>
+        ) : (
+        <form onSubmit={submitSizing} noValidate role="tabpanel" aria-label="Size" className="flex flex-col gap-4 p-4">
           <header>
             <h2 className="font-serif text-[20px] leading-none font-semibold text-bone">Position size</h2>
             <p className="mt-1.5 text-[11px] text-muted">{SIZING_MODES.find((option) => option.value === mode).summary}</p>
@@ -317,34 +351,20 @@ export default function SizingDrawer() {
                   </ul>
                 )}
 
-                <section aria-label="What this means" className="flex flex-col gap-2 border-t border-divider pt-3">
-                  <h3 className="text-[10px] font-medium tracking-[0.14em] text-muted uppercase">What this means</h3>
-                  <ul className="flex flex-col gap-1.5">
-                    {explainSizingResult(sizingResult).map((explanation) => (
-                      <li
-                        key={explanation.key}
-                        className={cn(
-                          'text-[12px] leading-snug',
-                          explanation.tone === 'caution' ? 'text-caution' : 'text-bone/85',
-                        )}
-                      >
-                        {explanation.text}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="flex gap-1.5 text-[10px] leading-snug text-muted" data-selectable>
-                    <Info size={11} aria-hidden="true" className="mt-px shrink-0" />
-                    <span>
-                      Source: calculated by the Maison engine from the numbers you entered
-                      {sizing.completedAt ? ` at ${formatClockTime(sizing.completedAt)}` : ''}. Shares are whole
-                      units unless fractional shares is on. A sizing aid, not financial advice.
-                    </span>
-                  </p>
-                </section>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('insights')}
+                  className="flex items-center gap-1.5 self-start text-[11px] text-muted hover:text-bone"
+                >
+                  <Info size={12} aria-hidden="true" />
+                  Calculated by the Maison engine
+                  {sizing.completedAt ? ` · ${formatClockTime(sizing.completedAt)}` : ''} · What it means →
+                </button>
               </section>
             )}
           </div>
         </form>
+        )}
       </div>
     </aside>
   )
