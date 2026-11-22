@@ -1,9 +1,11 @@
-import { ChevronRight, LoaderCircle, Scale } from 'lucide-react'
+import { ChevronRight, Info, LoaderCircle, Scale } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 
+import { useMediaQuery } from '../hooks/useMediaQuery.js'
 import { sizingRequestKey, usePositionSizing } from '../hooks/usePositionSizing.js'
 import { cn } from '../lib/cn.js'
-import { formatCurrency, formatPercentPoints, formatPrice, formatQuantity } from '../lib/format.js'
+import { formatClockTime, formatCurrency, formatPercentPoints, formatPrice, formatQuantity } from '../lib/format.js'
+import InsightsPanel from './InsightsPanel.jsx'
 import {
   EMPTY_FORM_VALUES,
   FIELD_DEFINITIONS,
@@ -16,6 +18,12 @@ import EngineStartHint from './EngineStartHint.jsx'
 import SegmentedControl from './SegmentedControl.jsx'
 
 const DRAWER_OPEN_STORAGE_KEY = 'maison.sizingDrawer.open'
+/** Below this width the open drawer floats over the chart instead of taking space. */
+const NARROW_WINDOW_QUERY = '(max-width: 899px)'
+const DRAWER_TABS = [
+  { value: 'size', label: 'Size' },
+  { value: 'insights', label: 'Insights' },
+]
 
 function readStoredDrawerOpen() {
   try {
@@ -88,6 +96,7 @@ function ResultCard({ label, value, emphasis = false }) {
  */
 export default function SizingDrawer() {
   const [isOpen, setIsOpen] = useState(readStoredDrawerOpen)
+  const [activeTab, setActiveTab] = useState('size')
   const [mode, setMode] = useState('risk_to_stop')
   const [riskBasis, setRiskBasis] = useState('percent')
   const [side, setSide] = useState('auto')
@@ -96,6 +105,14 @@ export default function SizingDrawer() {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
   const sizing = usePositionSizing()
   const panelId = useId()
+  const isNarrowWindow = useMediaQuery(NARROW_WINDOW_QUERY)
+  const [wasNarrowWindow, setWasNarrowWindow] = useState(isNarrowWindow)
+
+  // Collapse once when the window becomes narrow; the user can still reopen it.
+  if (isNarrowWindow !== wasNarrowWindow) {
+    setWasNarrowWindow(isNarrowWindow)
+    if (isNarrowWindow) setIsOpen(false)
+  }
 
   useEffect(() => {
     try {
@@ -137,8 +154,13 @@ export default function SizingDrawer() {
     <aside
       aria-label="Position sizing"
       className={cn(
-        'relative flex shrink-0 border-l border-divider bg-surface transition-[width] duration-200 ease-out',
-        isOpen ? 'w-[min(340px,40vw)] min-w-[300px]' : 'w-11',
+        'flex shrink-0 border-l border-divider bg-surface transition-[width] duration-200 ease-out',
+        !isOpen && 'relative w-11',
+        isOpen && !isNarrowWindow && 'relative w-[min(340px,40vw)] min-w-[300px]',
+        // Narrow windows: float over the chart instead of squeezing it.
+        isOpen &&
+          isNarrowWindow &&
+          'absolute inset-y-0 right-0 z-30 w-[min(340px,calc(100vw-1rem))] shadow-[-12px_0_40px_rgba(0,0,0,0.55)]',
       )}
     >
       <button
@@ -167,7 +189,36 @@ export default function SizingDrawer() {
         inert={!isOpen}
         className={cn('scrollbar-quiet min-w-0 flex-1 overflow-y-auto', !isOpen && 'invisible')}
       >
-        <form onSubmit={submitSizing} noValidate className="flex flex-col gap-4 p-4">
+        <div
+          role="tablist"
+          aria-label="Drawer view"
+          className="sticky top-0 z-10 flex gap-1 border-b border-divider bg-surface px-4 pt-3 pb-2"
+        >
+          {DRAWER_TABS.map((drawerTab) => (
+            <button
+              key={drawerTab.value}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === drawerTab.value}
+              onClick={() => setActiveTab(drawerTab.value)}
+              className={cn(
+                'rounded-full px-3.5 py-1 text-[12px] transition-colors',
+                activeTab === drawerTab.value
+                  ? 'bg-accent font-semibold text-obsidian'
+                  : 'text-muted hover:bg-surface-raised hover:text-bone',
+              )}
+            >
+              {drawerTab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'insights' ? (
+          <div role="tabpanel" aria-label="Insights" className="p-4">
+            <InsightsPanel sizingResult={sizing.result} />
+          </div>
+        ) : (
+        <form onSubmit={submitSizing} noValidate role="tabpanel" aria-label="Size" className="flex flex-col gap-4 p-4">
           <header>
             <h2 className="font-serif text-[20px] leading-none font-semibold text-bone">Position size</h2>
             <p className="mt-1.5 text-[11px] text-muted">{SIZING_MODES.find((option) => option.value === mode).summary}</p>
@@ -299,10 +350,21 @@ export default function SizingDrawer() {
                     ))}
                   </ul>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('insights')}
+                  className="flex items-center gap-1.5 self-start text-[11px] text-muted hover:text-bone"
+                >
+                  <Info size={12} aria-hidden="true" />
+                  Calculated by the Maison engine
+                  {sizing.completedAt ? ` · ${formatClockTime(sizing.completedAt)}` : ''} · What it means →
+                </button>
               </section>
             )}
           </div>
         </form>
+        )}
       </div>
     </aside>
   )

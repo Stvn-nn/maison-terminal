@@ -1,19 +1,11 @@
-import { Copy, Minus, Square, X } from 'lucide-react'
+import { Copy, EyeOff, Minus, ScanEye, Square, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { ENGINE_STARTUP_GRACE_MS } from '../config.js'
+import { useChartWatch } from '../hooks/useChartWatch.js'
 import { useNativeWindow } from '../hooks/useNativeWindow.js'
 import { useTerminalSocket } from '../hooks/useTerminalSocket.js'
-import { useVisionStatus } from '../hooks/useVisionStatus.js'
 import { cn } from '../lib/cn.js'
-
-const VISION_STATE_LABELS = {
-  idle: 'Chart watch off',
-  no_chart: 'Chart watch · no chart in view',
-  structure_visible: 'Chart watch · structure visible',
-  backtrack_required: 'Chart watch · history needed',
-  unknown: 'Chart watch · unknown',
-}
 
 function useSecondsUntil(targetDate) {
   const [currentTime, setCurrentTime] = useState(() => Date.now())
@@ -60,7 +52,10 @@ function EngineStatus() {
   return (
     <div className="flex items-center gap-2" role="status" aria-live="polite">
       <span aria-hidden="true" className={cn('size-1.5 rounded-full', statusPresentation.dotClass)} />
-      <span className="text-[11px] tracking-wide text-muted tabular-figures">{statusPresentation.label}</span>
+      <span className="hidden text-[11px] tracking-wide text-muted tabular-figures sm:inline">
+        {statusPresentation.label}
+      </span>
+      <span className="sr-only sm:hidden">{statusPresentation.label}</span>
       {connectionState === 'reconnecting' && !isStillStarting && (
         <button
           type="button"
@@ -74,14 +69,53 @@ function EngineStatus() {
   )
 }
 
-function VisionStatusLabel() {
-  const { state: reportedState } = useVisionStatus()
+function describeChartWatch({ isConnected, isAutoWatchEnabled, isWatching, visionState, scanState }) {
+  if (!isConnected) return { label: 'Chart watch · waiting for engine', tone: 'muted' }
+  if (!isAutoWatchEnabled && !isWatching) return { label: 'Chart watch off', tone: 'muted' }
+  if (scanState.phase === 'scanning') return { label: 'Looking for a chart…', tone: 'accent' }
+  if (isWatching) {
+    if (visionState === 'backtrack_required') return { label: 'Watching · history needed', tone: 'accent' }
+    if (visionState === 'no_chart') return { label: 'Watching · chart not in view', tone: 'muted' }
+    return { label: 'Watching your chart', tone: 'accent' }
+  }
+  if (scanState.phase === 'not_found') return { label: 'No chart on screen', tone: 'muted' }
+  return { label: 'Chart watch starting…', tone: 'muted' }
+}
+
+function ChartWatchToggle() {
+  const chartWatch = useChartWatch()
   const { isConnected } = useTerminalSocket()
-  const state = isConnected ? reportedState : 'unknown' // never show a stale watch state
+  const { label, tone } = describeChartWatch({ ...chartWatch, isConnected })
+  const isOn = chartWatch.isAutoWatchEnabled || chartWatch.isWatching
+  const region = chartWatch.watchedRegion
+  const tooltip = [
+    isOn ? 'Click to stop watching your screen' : 'Click to find and watch your broker chart',
+    region && chartWatch.isWatching
+      ? `Watching ${region.width}×${region.height} px at (${region.left}, ${region.top})`
+      : null,
+    chartWatch.scanState.phase === 'not_found'
+      ? 'Place your broker chart beside Maison Terminal so it is visible on screen.'
+      : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
   return (
-    <span className={cn('text-[11px] tracking-wide', state === 'backtrack_required' ? 'text-accent' : 'text-muted')}>
-      {VISION_STATE_LABELS[state] ?? VISION_STATE_LABELS.unknown}
-    </span>
+    <button
+      type="button"
+      onClick={isOn ? chartWatch.stopWatching : chartWatch.startWatching}
+      aria-pressed={isOn}
+      title={tooltip}
+      className="flex items-center gap-2 rounded-full px-2 py-1 text-[11px] tracking-wide hover:bg-surface-raised"
+    >
+      {isOn ? (
+        <ScanEye size={13} aria-hidden="true" className={tone === 'accent' ? 'text-accent' : 'text-muted'} />
+      ) : (
+        <EyeOff size={13} aria-hidden="true" className="text-muted" />
+      )}
+      <span className={cn('hidden md:inline', tone === 'accent' ? 'text-bone' : 'text-muted')}>{label}</span>
+      <span className="sr-only md:hidden">{label}</span>
+    </button>
   )
 }
 
@@ -118,14 +152,14 @@ export default function TitleBar() {
           <span className="text-[10px] font-medium tracking-[0.32em] text-muted uppercase">Terminal</span>
         </span>
         {!isNativeWindow && (
-          <span className="pointer-events-none rounded border border-divider px-1.5 py-px text-[10px] tracking-wide text-muted">
+          <span className="pointer-events-none hidden rounded border border-divider px-1.5 py-px text-[10px] tracking-wide text-muted lg:inline">
             Browser preview
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-5 pr-3">
-        <VisionStatusLabel />
+      <div className="flex items-center gap-3 pr-3 md:gap-5">
+        <ChartWatchToggle />
         <EngineStatus />
       </div>
 

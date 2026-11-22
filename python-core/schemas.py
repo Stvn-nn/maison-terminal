@@ -358,6 +358,53 @@ class MonitorInfo(BaseModel):
     is_virtual_desktop: bool
 
 
+class ExcludedRegion(StrictModel):
+    """A screen rectangle the scan must ignore (e.g. the Maison Terminal window itself)."""
+
+    left: int
+    top: int
+    width: int = Field(ge=1, le=16384)
+    height: int = Field(ge=1, le=16384)
+
+
+class ChartScanRequest(StrictModel):
+    exclude_regions: list[ExcludedRegion] = Field(default_factory=list, max_length=8)
+    start_watch: bool = Field(default=True, description="Configure and start the watch if found.")
+
+
+class ChartScanResponse(BaseModel):
+    found: bool
+    region: ScreenRegion | None
+    monitor_index: int | None
+    candle_columns: int = Field(description="Screen columns containing candles in the region.")
+    message: str
+    status: VisionStatus
+
+
+class ScreenCandlesResponse(BaseModel):
+    """Candles read from the watched screen region (shape only, no price labels)."""
+
+    available: bool
+    source: Literal["screen"] = "screen"
+    scale: Literal["relative"] = Field(
+        default="relative",
+        description="Prices are 100 (bottom of the plot) to 200 (top), not market prices.",
+    )
+    captured_at: datetime | None
+    region: ScreenRegion | None
+    candles: list[Candle]
+    note: str | None = None
+    source_window_title: str | None = Field(
+        default=None, description="Title of the window showing the watched chart."
+    )
+    symbol: str | None = Field(default=None, description="Instrument parsed from that title.")
+    title_last_price: str | None = Field(
+        default=None, description="Last price as displayed in the title (text, not a number)."
+    )
+    title_change: str | None = Field(default=None, description="Change as displayed, e.g. '−3.7%'.")
+    title_direction: Literal["up", "down"] | None = None
+
+
 # --------------------------------------------------------------------------------------
 # Macro & news
 # --------------------------------------------------------------------------------------

@@ -31,6 +31,14 @@ export const ENGINE_START_COMMAND = 'cd python-core && .venv\\Scripts\\python ma
 /** Where the desktop app writes the bundled engine's output (Tauri app_log_dir on Windows). */
 export const ENGINE_LOG_LOCATION = '%LOCALAPPDATA%\\com.maisonterminal.desktop\\logs\\maison-core.log'
 
+/**
+ * Screen-read candles (GET /api/v1/vision/candles) use placeholder times one minute apart
+ * from this origin and a relative price scale from 100 (chart bottom) to 200 (chart top).
+ */
+export const SCREEN_TIME_ORIGIN = 1_700_000_000
+export const SCREEN_BAR_SECONDS = 60
+export const RELATIVE_SCALE_FLOOR = 100
+
 /** A fresh launch shows "Starting engine…" (not "offline") while the bundled engine boots. */
 export const ENGINE_STARTUP_GRACE_MS = 25_000
 

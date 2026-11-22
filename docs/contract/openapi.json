@@ -117,6 +117,78 @@
         "title": "ChartPane",
         "type": "string"
       },
+      "ChartScanRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "exclude_regions": {
+            "items": {
+              "$ref": "#/components/schemas/ExcludedRegion"
+            },
+            "maxItems": 8,
+            "title": "Exclude Regions",
+            "type": "array"
+          },
+          "start_watch": {
+            "default": true,
+            "description": "Configure and start the watch if found.",
+            "title": "Start Watch",
+            "type": "boolean"
+          }
+        },
+        "title": "ChartScanRequest",
+        "type": "object"
+      },
+      "ChartScanResponse": {
+        "properties": {
+          "candle_columns": {
+            "description": "Screen columns containing candles in the region.",
+            "title": "Candle Columns",
+            "type": "integer"
+          },
+          "found": {
+            "title": "Found",
+            "type": "boolean"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "monitor_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monitor Index"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScreenRegion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/VisionStatus"
+          }
+        },
+        "required": [
+          "found",
+          "region",
+          "monitor_index",
+          "candle_columns",
+          "message",
+          "status"
+        ],
+        "title": "ChartScanResponse",
+        "type": "object"
+      },
       "ChartSeries": {
         "properties": {
           "data": {
@@ -260,6 +332,40 @@
           "unit"
         ],
         "title": "EconomicEvent",
+        "type": "object"
+      },
+      "ExcludedRegion": {
+        "additionalProperties": false,
+        "description": "A screen rectangle the scan must ignore (e.g. the Maison Terminal window itself).",
+        "properties": {
+          "height": {
+            "maximum": 16384.0,
+            "minimum": 1.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "left": {
+            "title": "Left",
+            "type": "integer"
+          },
+          "top": {
+            "title": "Top",
+            "type": "integer"
+          },
+          "width": {
+            "maximum": 16384.0,
+            "minimum": 1.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "left",
+          "top",
+          "width",
+          "height"
+        ],
+        "title": "ExcludedRegion",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -899,6 +1005,139 @@
           "price"
         ],
         "title": "PriceTarget",
+        "type": "object"
+      },
+      "ScreenCandlesResponse": {
+        "description": "Candles read from the watched screen region (shape only, no price labels).",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "candles": {
+            "items": {
+              "$ref": "#/components/schemas/Candle"
+            },
+            "title": "Candles",
+            "type": "array"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScreenRegion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scale": {
+            "const": "relative",
+            "default": "relative",
+            "description": "Prices are 100 (bottom of the plot) to 200 (top), not market prices.",
+            "title": "Scale",
+            "type": "string"
+          },
+          "source": {
+            "const": "screen",
+            "default": "screen",
+            "title": "Source",
+            "type": "string"
+          },
+          "source_window_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Title of the window showing the watched chart.",
+            "title": "Source Window Title"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Instrument parsed from that title.",
+            "title": "Symbol"
+          },
+          "title_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Change as displayed, e.g. '−3.7%'.",
+            "title": "Title Change"
+          },
+          "title_direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Direction"
+          },
+          "title_last_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last price as displayed in the title (text, not a number).",
+            "title": "Title Last Price"
+          }
+        },
+        "required": [
+          "available",
+          "captured_at",
+          "region",
+          "candles"
+        ],
+        "title": "ScreenCandlesResponse",
         "type": "object"
       },
       "ScreenRegion": {
@@ -2079,6 +2318,27 @@
         ]
       }
     },
+    "/api/v1/vision/candles": {
+      "get": {
+        "operationId": "candles_api_v1_vision_candles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenCandlesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Candles",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
     "/api/v1/vision/check": {
       "post": {
         "operationId": "check_api_v1_vision_check_post",
@@ -2181,6 +2441,47 @@
           }
         },
         "summary": "Get Monitors",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
+    "/api/v1/vision/scan": {
+      "post": {
+        "operationId": "scan_api_v1_vision_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChartScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scan",
         "tags": [
           "vision"
         ]

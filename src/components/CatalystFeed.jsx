@@ -122,13 +122,14 @@ export default function CatalystFeed() {
     feedBody = <p className="px-4 text-[12px] text-muted">Loading economic calendar…</p>
   } else if (calendar.status === 'unavailable') {
     feedBody = (
-      <p className="flex items-center gap-2 px-4 text-[12px] text-muted">
-        <span className="font-medium text-loss">Feed unavailable</span>
+      <p
+        className="flex min-w-0 items-center gap-2 overflow-hidden px-3 text-[12px] whitespace-nowrap text-muted md:px-4"
+        title={describeFeedError(calendar.error)}
+      >
+        <span className="shrink-0 font-medium text-loss">Feed unavailable</span>
         <span aria-hidden="true">·</span>
-        <span>{describeFeedError(calendar.error)}</span>
-        {calendar.error?.code === 'engine_unreachable' && (
-          <EngineStartHint />
-        )}
+        <span className="truncate">{describeFeedError(calendar.error)}</span>
+        {calendar.error?.code === 'engine_unreachable' && <EngineStartHint className="hidden xl:inline" />}
       </p>
     )
   } else if (upcomingReleases.length === 0) {
@@ -159,9 +160,9 @@ export default function CatalystFeed() {
       aria-label="Macro catalysts"
       className="flex h-11 shrink-0 items-center border-b border-divider bg-surface"
     >
-      <div className="flex h-full shrink-0 flex-col justify-center border-r border-divider px-4">
+      <div className="flex h-full shrink-0 flex-col justify-center border-r border-divider px-3 md:px-4">
         <span className="font-serif text-[15px] leading-none font-semibold text-bone">Catalysts</span>
-        <span className="mt-0.5 text-[10px] text-muted" title="Release times are shown in this time zone">
+        <span className="mt-0.5 hidden text-[10px] text-muted md:block" title="Release times are shown in this time zone">
           {timeZoneLabel}
         </span>
       </div>
@@ -189,7 +190,7 @@ export default function CatalystFeed() {
         </div>
       )}
 
-      <div className="flex h-full shrink-0 items-center gap-3 border-l border-divider px-3">
+      <div className="flex h-full shrink-0 items-center gap-2 border-l border-divider px-2 md:gap-3 md:px-3">
         <SegmentedControl
           label="Impact"
           labelPlacement="inline"
@@ -197,17 +198,20 @@ export default function CatalystFeed() {
           value={minimumImpact}
           onChange={setMinimumImpact}
         />
-        <div className="flex min-w-[6.5rem] flex-col items-end text-[10px] leading-tight">
+        <div
+          className="hidden min-w-[7.5rem] flex-col items-end text-[10px] leading-tight lg:flex"
+          title="Economic calendar data comes from Finnhub, fetched by the Maison engine with its own API key and cached for 60 seconds."
+        >
+          <span className="text-muted">Source: Finnhub, via the Maison engine</span>
           {calendar.isStale ? (
-            <span className="font-medium text-caution" title={describeFeedError(calendar.error)}>
-              Stale · {formatClockTime(calendar.lastUpdatedAt)}
+            <span className="font-medium text-caution">
+              Stale · {formatClockTime(calendar.lastUpdatedAt)} · {describeFeedError(calendar.error)}
             </span>
           ) : (
             <span className="text-muted tabular-figures">
               {calendar.lastUpdatedAt ? `Updated ${formatClockTime(calendar.lastUpdatedAt)}` : ' '}
             </span>
           )}
-          {calendar.isStale && <span className="text-muted">{describeFeedError(calendar.error)}</span>}
         </div>
         <button
           type="button"

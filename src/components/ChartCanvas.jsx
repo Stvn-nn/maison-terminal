@@ -1,4 +1,4 @@
-import { AlertTriangle, FileUp, LoaderCircle, RotateCcw } from 'lucide-react'
+import { AlertTriangle, FileUp, Info, LoaderCircle, RotateCcw, ScanEye } from 'lucide-react'
 import {
   CandlestickSeries,
   ColorType,
@@ -8,15 +8,51 @@ import {
   LineStyle,
   createChart,
 } from 'lightweight-charts'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { MAX_CANDLES_PER_REQUEST } from '../config.js'
+import {
+  MAX_CANDLES_PER_REQUEST,
+  RELATIVE_SCALE_FLOOR,
+  SCREEN_BAR_SECONDS,
+  SCREEN_TIME_ORIGIN,
+} from '../config.js'
+import maisonLogo from '../assets/maison-logo.png'
+import { useChartInsights } from '../hooks/useChartInsights.js'
+import { useChartWatch } from '../hooks/useChartWatch.js'
 import { useIndicatorWorkspace } from '../hooks/useIndicatorWorkspace.js'
+import { useScreenChart } from '../hooks/useScreenChart.js'
 import { useTerminalSocket } from '../hooks/useTerminalSocket.js'
 import { CandleFileError } from '../lib/candles.js'
 import { cn } from '../lib/cn.js'
 import { formatClockTime } from '../lib/format.js'
 import EngineStartHint from './EngineStartHint.jsx'
+import SegmentedControl from './SegmentedControl.jsx'
+import SignalPanel from './SignalPanel.jsx'
+
+const CHART_SOURCES = [
+  {
+    value: 'screen',
+    label: 'Screen',
+    description: 'Read the candles from the broker chart on your screen (relative scale, no prices)',
+  },
+  { value: 'file', label: 'CSV file', description: 'Load real prices from a broker CSV export' },
+]
+
+function screenBarNumber(chartTime) {
+  return Math.round((chartTime - SCREEN_TIME_ORIGIN) / SCREEN_BAR_SECONDS) + 1
+}
+
+function formatDefaultTimeLabel(chartTime) {
+  const dateOptions = { timeZone: 'UTC', dateStyle: 'medium' }
+  if (typeof chartTime === 'number') {
+    return new Date(chartTime * 1000).toLocaleString(undefined, { ...dateOptions, timeStyle: 'short' })
+  }
+  if (typeof chartTime === 'string') return new Date(`${chartTime}T00:00:00Z`).toLocaleDateString(undefined, dateOptions)
+  if (chartTime && typeof chartTime === 'object') {
+    return new Date(Date.UTC(chartTime.year, chartTime.month - 1, chartTime.day)).toLocaleDateString(undefined, dateOptions)
+  }
+  return String(chartTime)
+}
 
 const PALETTE = {
   obsidian: '#0D0D0E',
@@ -104,16 +140,30 @@ const BASE_CHART_OPTIONS = {
  * The viewport is fitted only for a newly loaded dataset; otherwise the user's
  * historical range is restored exactly.
  */
-function renderChartData(chart, chartData, { fitToContent }) {
-  const preservedLogicalRange = fitToContent ? null : chart.timeScale().getVisibleLogicalRange()
-
+/** Remove every series and extra pane (used when the selected source has no data yet). */
+function clearChart(chart) {
   for (const pane of chart.panes()) {
     for (const existingSeries of pane.getSeries()) chart.removeSeries(existingSeries)
   }
   for (let paneIndex = chart.panes().length - 1; paneIndex > 0; paneIndex -= 1) chart.removePane(paneIndex)
+}
+
+/** Screen-read candles sit on 100..200; show them as 0..100 (% of the chart's height). */
+const RELATIVE_PRICE_FORMAT = {
+  type: 'custom',
+  minMove: 0.1,
+  formatter: (relativeValue) => (relativeValue - RELATIVE_SCALE_FLOOR).toFixed(1),
+}
+
+function renderChartData(chart, chartData, { fitToContent, isRelativeScale }) {
+  const preservedLogicalRange = fitToContent ? null : chart.timeScale().getVisibleLogicalRange()
+  clearChart(chart)
 
   const isIntradayData = typeof chartData.candles[0]?.time === 'number'
-  chart.applyOptions({ timeScale: { timeVisible: isIntradayData, secondsVisible: false } })
+  chart.applyOptions({
+    timeScale: { timeVisible: isIntradayData && !isRelativeScale, secondsVisible: false },
+  })
+  const pricePaneFormat = isRelativeScale ? { priceFormat: RELATIVE_PRICE_FORMAT } : {}
 
   const candleSeries = chart.addSeries(CandlestickSeries, {
     upColor: 'rgba(0, 200, 5, 0.16)',
@@ -123,6 +173,7 @@ function renderChartData(chart, chartData, { fitToContent }) {
     wickUpColor: PALETTE.gain,
     wickDownColor: PALETTE.loss,
     priceLineColor: PALETTE.muted,
+    ...pricePaneFormat,
   })
   candleSeries.setData(chartData.candles)
 
@@ -173,6 +224,7 @@ function renderChartData(chart, chartData, { fitToContent }) {
             lastValueVisible: !isBand,
             crosshairMarkerVisible: false,
             title: indicator.pane === 'price' ? '' : series.key,
+            ...(indicator.pane === 'price' ? pricePaneFormat : {}),
           },
           targetPaneIndex,
         )
@@ -235,20 +287,25 @@ function ChartStatePanel({ icon, title, children }) {
   )
 }
 
-function OpenFileButton({ onClick, variant = 'primary' }) {
+const PRIMARY_PILL_CLASS =
+  'inline-flex items-center gap-2 rounded-full bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-obsidian shadow-[0_2px_10px_rgba(106,134,176,0.35)] transition-colors hover:bg-accent-strong'
+
+function OpenFileButton({ onClick, variant = 'primary', compact = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-label="Open CSV export"
+      title="Open a CSV export from your broker"
       className={cn(
-        'inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors',
         variant === 'primary'
-          ? 'bg-accent font-semibold text-obsidian shadow-[0_2px_10px_rgba(106,134,176,0.35)] hover:bg-accent-strong'
-          : 'border border-accent/40 text-bone hover:border-accent hover:bg-accent/15',
+          ? PRIMARY_PILL_CLASS
+          : 'inline-flex items-center gap-2 rounded-full border border-accent/40 px-3.5 py-1.5 text-[12px] font-medium text-bone transition-colors hover:border-accent hover:bg-accent/15',
+        compact && 'px-2.5',
       )}
     >
       <FileUp size={13} aria-hidden="true" />
-      Open CSV export…
+      <span className={cn(compact && 'hidden lg:inline')}>Open CSV export…</span>
     </button>
   )
 }
@@ -259,17 +316,31 @@ function OpenFileButton({ onClick, variant = 'primary' }) {
  */
 export default function ChartCanvas() {
   const workspace = useIndicatorWorkspace()
+  const chartWatch = useChartWatch()
   const { isConnected } = useTerminalSocket()
+  const [chartSource, setChartSource] = useState('screen')
+  const screenChart = useScreenChart({ enabled: chartSource === 'screen' && chartWatch.isWatching })
   const chartContainerRef = useRef(null)
   const chartRef = useRef(null)
   const fileInputRef = useRef(null)
   const renderedDatasetVersionRef = useRef(0)
+  const lastScreenBarCountRef = useRef(0)
+  const isRelativeScaleRef = useRef(false)
 
   // Create the chart once; resize with the container while keeping the user's viewport.
   useEffect(() => {
     const chartContainer = chartContainerRef.current
     const chart = createChart(chartContainer, {
       ...BASE_CHART_OPTIONS,
+      localization: {
+        timeFormatter: (chartTime) =>
+          isRelativeScaleRef.current ? `Bar ${screenBarNumber(chartTime)}` : formatDefaultTimeLabel(chartTime),
+      },
+      timeScale: {
+        ...BASE_CHART_OPTIONS.timeScale,
+        // Returning null keeps Lightweight Charts' default date/time tick labels.
+        tickMarkFormatter: (chartTime) => (isRelativeScaleRef.current ? `${screenBarNumber(chartTime)}` : null),
+      },
       width: chartContainer.clientWidth,
       height: chartContainer.clientHeight,
     })
@@ -291,46 +362,110 @@ export default function ChartCanvas() {
     }
   }, [])
 
-  // Draw whatever the service returned; fit only when a new file was loaded.
+  // Feed freshly read screen candles to the engine; fit only when the chart itself changes.
+  const { loadScreenCandles } = workspace
+  useEffect(() => {
+    if (chartSource !== 'screen' || screenChart.status !== 'ready' || screenChart.candles.length < 2) return
+    const previousBarCount = lastScreenBarCountRef.current
+    const barCount = screenChart.candles.length
+    const isNewDataset = previousBarCount === 0 || Math.abs(barCount - previousBarCount) > 0.25 * previousBarCount
+    lastScreenBarCountRef.current = barCount
+    loadScreenCandles(screenChart.candles, { isNewDataset })
+  }, [chartSource, screenChart.status, screenChart.candles, loadScreenCandles])
+
+  // Only show data that belongs to the selected source.
+  const visibleChartData = workspace.dataOrigin === chartSource ? workspace.chartData : null
+  const isRelativeScale = workspace.dataOrigin === 'screen'
+
+  // Draw whatever the service returned; fit only when a new dataset was loaded.
   useEffect(() => {
     const chart = chartRef.current
-    if (!chart || !workspace.chartData) return
+    if (!chart) return
+    isRelativeScaleRef.current = isRelativeScale
+    if (!visibleChartData) {
+      clearChart(chart)
+      return
+    }
     const isNewDataset = workspace.datasetVersion !== renderedDatasetVersionRef.current
-    renderChartData(chart, workspace.chartData, { fitToContent: isNewDataset })
+    renderChartData(chart, visibleChartData, { fitToContent: isNewDataset, isRelativeScale })
     renderedDatasetVersionRef.current = workspace.datasetVersion
-  }, [workspace.chartData, workspace.datasetVersion])
+  }, [visibleChartData, workspace.datasetVersion, isRelativeScale])
 
-  const legendEntries = useMemo(() => buildLegendEntries(workspace.chartData), [workspace.chartData])
+  // Tell the drawer's Insights tab what is on the chart and where it came from.
+  const { setChartInsights } = useChartInsights()
+  const isShowingScreen = chartSource === 'screen'
+  useEffect(() => {
+    setChartInsights({
+      summary: visibleChartData?.summary ?? null,
+      dataOrigin: visibleChartData ? workspace.dataOrigin : null,
+      sourceName: workspace.sourceName,
+      computedAt: workspace.computedAt,
+      candleCount: visibleChartData?.candles.length ?? 0,
+      symbol: isShowingScreen ? screenChart.symbol : null,
+      symbolSource: isShowingScreen && screenChart.symbol ? 'window_title' : null,
+      titleLastPrice: isShowingScreen ? screenChart.titleLastPrice : null,
+      titleChange: isShowingScreen ? screenChart.titleChange : null,
+      titleDirection: isShowingScreen ? screenChart.titleDirection : null,
+    })
+  }, [
+    setChartInsights,
+    visibleChartData,
+    workspace.dataOrigin,
+    workspace.sourceName,
+    workspace.computedAt,
+    isShowingScreen,
+    screenChart.symbol,
+    screenChart.titleLastPrice,
+    screenChart.titleChange,
+    screenChart.titleDirection,
+  ])
+
+  const legendEntries = useMemo(() => buildLegendEntries(visibleChartData), [visibleChartData])
   const openFilePicker = () => fileInputRef.current?.click()
   const handleFileChosen = (changeEvent) => {
     const chosenFile = changeEvent.target.files?.[0]
     changeEvent.target.value = '' // allow re-opening the same file
+    if (!chosenFile) return
+    setChartSource('file')
     workspace.loadCandleFile(chosenFile)
   }
+  const changeChartSource = (nextSource) => {
+    if (nextSource === 'screen') lastScreenBarCountRef.current = 0 // fit the screen chart again
+    setChartSource(nextSource)
+  }
 
-  const hasChartData = workspace.chartData !== null
+  const hasChartData = visibleChartData !== null
   const isBusy = workspace.status === 'parsing' || workspace.status === 'computing'
   const isStale = hasChartData && !isConnected
-  const summary = workspace.chartData?.summary
+  const summary = visibleChartData?.summary
   const fileNotice = workspace.fileNotice
   const canRetryFailure = workspace.status === 'failed' && workspace.canRetry && workspace.error?.isRecoverable
+  const isScreenSource = chartSource === 'screen'
+  const showFileFailure = !isScreenSource && workspace.status === 'failed'
+  const chartTitle = isScreenSource ? 'Your screen' : (workspace.dataOrigin === 'file' && workspace.sourceName) || 'CSV file'
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-11 shrink-0 items-center gap-4 border-b border-divider px-4">
+      <div className="flex h-11 shrink-0 items-center gap-3 border-b border-divider px-3 md:gap-4 md:px-4">
         <div className="flex min-w-0 items-baseline gap-2">
           <h1
-            className="max-w-[18rem] truncate font-serif text-[17px] leading-none font-semibold text-bone"
-            title={workspace.sourceName ?? undefined}
+            className="max-w-[14rem] shrink-0 truncate font-serif text-[17px] leading-none font-semibold text-bone"
+            title={chartTitle}
           >
-            {workspace.sourceName ?? 'Chart'}
+            {chartTitle}
           </h1>
-          {fileNotice && hasChartData && (
-            <span className="truncate text-[11px] text-muted tabular-figures">
-              {fileNotice.candleCount.toLocaleString()} bars
-              {fileNotice.truncatedRowCount > 0 &&
-                ` · most recent ${MAX_CANDLES_PER_REQUEST.toLocaleString()} (service limit)`}
-              {fileNotice.skippedRowCount > 0 && ` · ${fileNotice.skippedRowCount} unreadable rows skipped`}
+          {hasChartData && (
+            <span className="hidden truncate text-[11px] text-muted tabular-figures sm:inline">
+              {isScreenSource
+                ? `${visibleChartData.candles.length.toLocaleString()} candles · relative scale`
+                : fileNotice && (
+                    <>
+                      {fileNotice.candleCount.toLocaleString()} bars
+                      {fileNotice.truncatedRowCount > 0 &&
+                        ` · most recent ${MAX_CANDLES_PER_REQUEST.toLocaleString()} (service limit)`}
+                      {fileNotice.skippedRowCount > 0 && ` · ${fileNotice.skippedRowCount} unreadable rows skipped`}
+                    </>
+                  )}
             </span>
           )}
         </div>
@@ -346,37 +481,27 @@ export default function ChartCanvas() {
           </ul>
         )}
 
-        <div className="ml-auto flex shrink-0 items-center gap-3">
-          {summary && (
-            <span
-              className="text-[11px] text-muted"
-              title={summary.signals.map((signal) => `${signal.name}: ${signal.detail}`).join('\n')}
-            >
-              Python signal{' '}
-              <span
-                className={cn(
-                  'font-medium capitalize',
-                  summary.bias === 'bullish' && 'text-gain',
-                  summary.bias === 'bearish' && 'text-loss',
-                  summary.bias === 'neutral' && 'text-bone',
-                )}
-              >
-                {summary.bias} ({summary.score > 0 ? '+' : ''}
-                {summary.score})
-              </span>
-            </span>
-          )}
-          {isBusy && hasChartData && (
-            <span className="flex items-center gap-1.5 text-[11px] text-muted" role="status">
+        <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
+          <SignalPanel summary={summary} dataOrigin={workspace.dataOrigin} />
+          {isBusy && hasChartData && !isScreenSource && (
+            <span className="hidden items-center gap-1.5 text-[11px] text-muted sm:flex" role="status">
               <LoaderCircle size={12} aria-hidden="true" className="motion-safe:animate-spin" /> Computing…
             </span>
           )}
           {isStale && (
-            <span className="text-[11px] font-medium text-caution" role="status">
+            <span className="hidden text-[11px] font-medium text-caution md:inline" role="status">
               Engine offline · series from {formatClockTime(workspace.computedAt)}
             </span>
           )}
-          {hasChartData && <OpenFileButton onClick={openFilePicker} variant="secondary" />}
+          <SegmentedControl
+            label="Source"
+            labelPlacement="inline"
+            options={CHART_SOURCES}
+            value={chartSource}
+            onChange={changeChartSource}
+            className="[&>span]:hidden md:[&>span]:inline"
+          />
+          {!isScreenSource && hasChartData && <OpenFileButton onClick={openFilePicker} variant="secondary" compact />}
           <input
             ref={fileInputRef}
             type="file"
@@ -388,7 +513,7 @@ export default function ChartCanvas() {
         </div>
       </div>
 
-      {workspace.status === 'failed' && hasChartData && (
+      {showFileFailure && hasChartData && (
         <div role="alert" className="flex items-center gap-3 border-b border-loss/30 bg-loss/10 px-4 py-2 text-[12px] text-bone">
           <AlertTriangle size={13} aria-hidden="true" className="shrink-0 text-loss" />
           <span className="min-w-0 flex-1">{describeWorkspaceError(workspace.error)}</span>
@@ -403,11 +528,15 @@ export default function ChartCanvas() {
       <div className="relative min-h-0 flex-1">
         <div ref={chartContainerRef} className="absolute inset-0" data-testid="chart-container" />
 
-        {workspace.status === 'empty' && (
-          <ChartStatePanel title="No price history connected">
+        {isScreenSource && !hasChartData && (
+          <ScreenSourceState chartWatch={chartWatch} screenChart={screenChart} />
+        )}
+
+        {!isScreenSource && !hasChartData && !isBusy && !showFileFailure && (
+          <ChartStatePanel title="Load real prices from a file">
             <p className="text-[13px] leading-relaxed text-muted">
-              The analytical service doesn’t provide a price-history endpoint yet. Open a CSV export from
-              your broker and the service will compute the indicators for it.
+              Open a CSV export from your broker and the engine will compute the indicators on your
+              actual prices. (The Screen source needs no file but shows shapes, not prices.)
             </p>
             <p className="text-[11px] text-muted">
               Columns: <span className="text-bone/80">time, open, high, low, close</span> (volume optional).
@@ -417,7 +546,7 @@ export default function ChartCanvas() {
           </ChartStatePanel>
         )}
 
-        {isBusy && !hasChartData && (
+        {isBusy && !hasChartData && !isScreenSource && (
           <ChartStatePanel
             icon={<LoaderCircle size={22} aria-hidden="true" className="text-accent motion-safe:animate-spin" />}
             title={workspace.status === 'parsing' ? 'Reading file…' : 'Computing indicators…'}
@@ -428,7 +557,7 @@ export default function ChartCanvas() {
           </ChartStatePanel>
         )}
 
-        {workspace.status === 'failed' && !hasChartData && (
+        {showFileFailure && !hasChartData && (
           <ChartStatePanel
             icon={<AlertTriangle size={22} aria-hidden="true" className="text-loss" />}
             title="Couldn’t load the chart"
@@ -454,6 +583,67 @@ export default function ChartCanvas() {
           </ChartStatePanel>
         )}
       </div>
+
+      <ChartSourceLine
+        visibleChartData={visibleChartData}
+        dataOrigin={workspace.dataOrigin}
+        sourceName={workspace.sourceName}
+        computedAt={workspace.computedAt}
+        screenChart={screenChart}
+      />
     </div>
+  )
+}
+
+/** Screen source with nothing to draw: just the MT mark and one line of status. */
+function ScreenSourceState({ chartWatch, screenChart }) {
+  const isOff = !chartWatch.isAutoWatchEnabled && !chartWatch.isWatching
+  let statusLine = 'No chart detected'
+  if (isOff) statusLine = 'Chart watch is off'
+  else if (chartWatch.isWatching && chartWatch.visionState !== 'no_chart') {
+    statusLine = screenChart.status === 'unreadable' ? 'Chart detected · candles can’t be read' : 'Reading chart…'
+  }
+  return (
+    <div className="absolute inset-0 z-10 grid place-items-center bg-obsidian" role="status">
+      <div className="flex flex-col items-center gap-4">
+        <img
+          src={maisonLogo}
+          alt="Maison Terminal"
+          className="size-20 rounded-2xl ring-1 ring-divider"
+          draggable={false}
+        />
+        <p className="font-serif text-[20px] text-bone">{statusLine}</p>
+        {isOff && (
+          <button type="button" onClick={chartWatch.startWatching} className={PRIMARY_PILL_CLASS}>
+            <ScanEye size={13} aria-hidden="true" /> Turn on chart watch
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** One line under the chart saying exactly where the plotted data came from. */
+function ChartSourceLine({ visibleChartData, dataOrigin, sourceName, computedAt, screenChart }) {
+  if (!visibleChartData) return null
+  let sourceText
+  if (dataOrigin === 'screen') {
+    const region = screenChart.region
+    const regionText = region ? ` (${region.width}×${region.height} px at ${region.left}, ${region.top})` : ''
+    sourceText = `Source: candles read from your screen${regionText} at ${formatClockTime(screenChart.capturedAt)}. Relative scale: 0 = bottom of your chart, 100 = top, not prices.`
+  } else {
+    sourceText = `Source: prices from ${sourceName ?? 'your CSV file'}.`
+  }
+  return (
+    <p
+      className="flex shrink-0 items-center gap-1.5 truncate border-t border-divider px-4 py-1.5 text-[11px] text-muted"
+      title={sourceText}
+      data-selectable
+    >
+      <Info size={11} aria-hidden="true" className="shrink-0" />
+      <span className="truncate">
+        {sourceText} Indicators computed by the Maison engine (pandas-ta) at {formatClockTime(computedAt)}.
+      </span>
+    </p>
   )
 }

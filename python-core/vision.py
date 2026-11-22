@@ -48,9 +48,13 @@ from schemas import (
     BACKTRACK_CLEARED_MESSAGE,
     BACKTRACK_REQUIRED_MESSAGE,
     BacktrackEventData,
+    Candle,
     CandleColorProfile,
+    ChartScanRequest,
+    ChartScanResponse,
     MonitorInfo,
     PixelRect,
+    ScreenCandlesResponse,
     ScreenRegion,
     SwingPoint,
     VisionAnalysis,
@@ -66,7 +70,8 @@ from ws import WebSocketBroadcaster
 logger = logging.getLogger("maison.vision")
 
 # --- Tunables -------------------------------------------------------------------------
-BACKGROUND_COLOR_DISTANCE = 40.0  # BGR distance that counts as "not background"
+BACKGROUND_COLOR_DISTANCE = 40  # BGR distance that counts as "not background"
+BACKGROUND_SAMPLE_STEP = 4  # sample every 4th pixel per axis when estimating the background
 AXIS_LINE_MIN_FILL = 0.90  # a separator line covers >= 90% of the image span
 SEPARATOR_MAX_SATURATION = 40  # axis separators are grey; coloured lines are price lines
 AXIS_SEARCH_FRACTION_RIGHT = 0.40  # price axis separator searched in the right 40%
@@ -165,17 +170,29 @@ def decode_image(image_base64: str) -> np.ndarray:
 
 
 def estimate_background_color(image: np.ndarray) -> np.ndarray:
-    """Most common colour after coarse quantisation (robust to candles and grid lines)."""
-    quantised = (image // 16).reshape(-1, 3).astype(np.int32)
+    """Most common colour after coarse quantisation (robust to candles and grid lines).
+
+    The background dominates any chart, so a sparse grid of pixels finds it just as reliably
+    as every pixel and keeps this cheap on large (4K-class) captures.
+    """
+    sample_step = BACKGROUND_SAMPLE_STEP if image.shape[0] * image.shape[1] > 250_000 else 1
+    sampled_pixels = image[::sample_step, ::sample_step].reshape(-1, 3)
+    quantised = (sampled_pixels // 16).astype(np.int32)
     bin_codes = quantised[:, 0] * 256 + quantised[:, 1] * 16 + quantised[:, 2]
     dominant_code = np.bincount(bin_codes).argmax()
-    dominant_pixels = image.reshape(-1, 3)[bin_codes == dominant_code]
+    dominant_pixels = sampled_pixels[bin_codes == dominant_code]
     return dominant_pixels.mean(axis=0)
 
 
 def foreground_mask(image: np.ndarray, background_color: np.ndarray) -> np.ndarray:
-    color_distance = np.linalg.norm(image.astype(np.float32) - background_color, axis=2)
-    return color_distance > BACKGROUND_COLOR_DISTANCE
+    """Pixels whose colour differs from the background by more than the threshold.
+
+    Compares squared distances in int32 (no float conversion or square root): same result,
+    several times faster on full-screen captures.
+    """
+    channel_differences = image.astype(np.int32) - background_color.astype(np.int32)
+    squared_distance = np.einsum("ijk,ijk->ij", channel_differences, channel_differences)
+    return squared_distance > BACKGROUND_COLOR_DISTANCE**2
 
 
 def _line_positions(fill_ratios: np.ndarray, search_start: int, search_stop: int) -> list[int]:
@@ -257,18 +274,22 @@ def _remove_lines_and_labels(candle_mask: np.ndarray) -> np.ndarray:
     component_count, component_labels, component_stats, _ = cv2.connectedComponentsWithStats(
         cleaned_mask.astype(np.uint8), connectivity=8
     )
-    for component_index in range(1, component_count):
-        component_width = component_stats[component_index, cv2.CC_STAT_WIDTH]
-        component_height = component_stats[component_index, cv2.CC_STAT_HEIGHT]
-        component_area = component_stats[component_index, cv2.CC_STAT_AREA]
-        is_speck = component_area < MIN_SPECK_AREA
-        is_label_or_line = (
-            component_width >= max(12, LABEL_MIN_WIDTH_FRACTION * plot_width)
-            and component_height <= LABEL_MAX_HEIGHT_FRACTION * plot_height
-            and component_width >= LABEL_MIN_ASPECT * component_height
-        )
-        if is_speck or is_label_or_line:
-            cleaned_mask[component_labels == component_index] = False
+    # Classify every component at once, then clear them all in a single lookup pass.
+    # (Clearing one component at a time rescans the whole image per component, which took
+    # seconds on real broker charts with 1,000+ text and grid fragments.)
+    component_widths = component_stats[:, cv2.CC_STAT_WIDTH]
+    component_heights = component_stats[:, cv2.CC_STAT_HEIGHT]
+    component_areas = component_stats[:, cv2.CC_STAT_AREA]
+    is_speck = component_areas < MIN_SPECK_AREA
+    is_label_or_line = (
+        (component_widths >= max(12, LABEL_MIN_WIDTH_FRACTION * plot_width))
+        & (component_heights <= LABEL_MAX_HEIGHT_FRACTION * plot_height)
+        & (component_widths >= LABEL_MIN_ASPECT * component_heights)
+    )
+    should_remove_component = is_speck | is_label_or_line
+    should_remove_component[0] = False  # label 0 is the background
+    if component_count > 1 and should_remove_component.any():
+        cleaned_mask[should_remove_component[component_labels]] = False
     return cleaned_mask
 
 
@@ -549,6 +570,26 @@ def backtrack_event_data(analysis: VisionAnalysis) -> BacktrackEventData:
 # --------------------------------------------------------------------------------------
 
 
+def analyze_and_read_candles(
+    image: np.ndarray,
+    color_profile: CandleColorProfile,
+    left_margin_pct: float,
+    plot_bounds_override: PixelRect | None,
+) -> tuple[VisionAnalysis, list[Candle]]:
+    """One watch frame: the backtrack verdict plus the candles visible in the plot."""
+    from screen_chart import read_candles  # local import: screen_chart imports this module
+
+    analysis = analyze_chart_image(image, color_profile, left_margin_pct, plot_bounds_override)
+    if analysis.chart_bounds is None or REASON_NO_CHART in analysis.reasons:
+        return analysis, []
+    plot_bounds = analysis.chart_bounds
+    plot_image = image[
+        plot_bounds.y : plot_bounds.y + plot_bounds.height,
+        plot_bounds.x : plot_bounds.x + plot_bounds.width,
+    ]
+    return analysis, read_candles(plot_image)
+
+
 class VisionService:
     def __init__(self, settings: Settings, broadcaster: WebSocketBroadcaster) -> None:
         self._settings = settings
@@ -562,6 +603,8 @@ class VisionService:
         self._loop_task: asyncio.Task[None] | None = None
         self._last_analysis: VisionAnalysis | None = None
         self._last_error: str | None = None
+        self._screen_candles: list[Candle] = []
+        self._screen_candles_captured_at: datetime | None = None
 
     @property
     def is_running(self) -> bool:
@@ -579,6 +622,99 @@ class VisionService:
     def configure(self, config: VisionConfig) -> None:
         self._config = config
         self._debouncer.reset()
+        self._screen_candles = []
+        self._screen_candles_captured_at = None
+
+    def screen_candles(self) -> ScreenCandlesResponse:
+        """Candles read from the watched region on the most recent frame."""
+        has_candles = self.is_running and len(self._screen_candles) >= 2
+        if has_candles:
+            note = None
+        elif not self.is_running:
+            note = "Chart watch is not running"
+        else:
+            note = "No coloured candles could be read from the watched region"
+        from window_info import parse_chart_title, window_title_at
+
+        region = self._config.region if self._config else None
+        source_window_title = None
+        if region is not None and self.is_running:
+            try:
+                source_window_title = window_title_at(
+                    region.left + region.width // 2, region.top + region.height // 2
+                )
+            except OSError:
+                source_window_title = None
+        chart_title = parse_chart_title(source_window_title)
+        return ScreenCandlesResponse(
+            available=has_candles,
+            captured_at=self._screen_candles_captured_at,
+            region=region,
+            candles=self._screen_candles if has_candles else [],
+            note=note,
+            source_window_title=source_window_title,
+            symbol=chart_title.symbol if chart_title else None,
+            title_last_price=chart_title.last_price if chart_title else None,
+            title_change=chart_title.change if chart_title else None,
+            title_direction=chart_title.direction if chart_title else None,
+        )
+
+    async def scan_for_chart(self, scan_request: ChartScanRequest) -> ChartScanResponse:
+        """Find the largest coloured-candle chart on any monitor and (optionally) watch it."""
+        from screen_chart import locate_chart_region  # local import: avoids an import cycle
+
+        monitors = await self._run_in_worker(list_monitors)
+        physical_monitors = [monitor for monitor in monitors if not monitor.is_virtual_desktop]
+        best_match = None
+        for monitor in physical_monitors or monitors:
+            monitor_region = ScreenRegion(
+                left=monitor.left, top=monitor.top, width=monitor.width, height=monitor.height
+            )
+            monitor_frame = await self._run_in_worker(capture_region, monitor_region)
+            excluded_in_monitor = [
+                PixelRect(
+                    x=excluded.left - monitor.left,
+                    y=excluded.top - monitor.top,
+                    width=excluded.width,
+                    height=excluded.height,
+                )
+                for excluded in scan_request.exclude_regions
+            ]
+            candidate = await self._run_in_worker(
+                locate_chart_region, monitor_frame, excluded_in_monitor
+            )
+            if candidate and (
+                best_match is None or candidate.candle_columns > best_match[1].candle_columns
+            ):
+                best_match = (monitor, candidate)
+
+        if best_match is None:
+            return ChartScanResponse(
+                found=False,
+                region=None,
+                monitor_index=None,
+                candle_columns=0,
+                message="No chart with coloured candles is visible outside Maison Terminal",
+                status=self.status(),
+            )
+        monitor, candidate = best_match
+        found_region = ScreenRegion(
+            left=monitor.left + candidate.bounds.x,
+            top=monitor.top + candidate.bounds.y,
+            width=candidate.bounds.width,
+            height=candidate.bounds.height,
+        )
+        if scan_request.start_watch:
+            self.configure(VisionConfig(region=found_region))
+            await self.start()
+        return ChartScanResponse(
+            found=True,
+            region=found_region,
+            monitor_index=monitor.index,
+            candle_columns=candidate.candle_columns,
+            message="Chart found on screen",
+            status=self.status(),
+        )
 
     def _margin_pct(self, config: VisionConfig | None) -> float:
         if config is not None and config.left_margin_pct is not None:
@@ -640,15 +776,18 @@ class VisionService:
         self._worker.shutdown(wait=False, cancel_futures=True)
 
     async def process_frame(self, frame: np.ndarray, config: VisionConfig) -> VisionAnalysis:
-        """Analyse a frame, update the debouncer and broadcast any transition."""
-        analysis: VisionAnalysis = await self._run_in_worker(
-            analyze_chart_image,
+        """Analyse a frame, read its candles, update the debouncer and broadcast transitions."""
+        analysis, candles = await self._run_in_worker(
+            analyze_and_read_candles,
             frame,
             config.color_profile,
             self._margin_pct(config),
             config.plot_bounds,
         )
         self._last_analysis = analysis
+        if config is self._config:  # ignore a frame from a region that was just replaced
+            self._screen_candles = candles
+            self._screen_candles_captured_at = analysis.captured_at
         transition = self._debouncer.update(analysis)
         if transition == WsEventType.BACKTRACK_REQUIRED:
             await self._broadcaster.broadcast(
@@ -733,5 +872,13 @@ def build_router(auth_dependency: Callable[..., Any]) -> APIRouter:
     @router.post("/check", response_model=VisionAnalysis)
     async def check(check_request: VisionCheckRequest, request: Request) -> VisionAnalysis:
         return await _vision_service(request).check_once(check_request)
+
+    @router.post("/scan", response_model=ChartScanResponse)
+    async def scan(scan_request: ChartScanRequest, request: Request) -> ChartScanResponse:
+        return await _vision_service(request).scan_for_chart(scan_request)
+
+    @router.get("/candles", response_model=ScreenCandlesResponse)
+    async def candles(request: Request) -> ScreenCandlesResponse:
+        return _vision_service(request).screen_candles()
 
     return router

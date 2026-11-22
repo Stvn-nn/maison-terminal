@@ -47,6 +47,7 @@ export function usePositionSizing() {
         result: sizingResult,
         error: null,
         submittedRequestKey: requestKey,
+        completedAt: new Date(),
       })
     } catch (requestError) {
       if (isAbortError(requestError) || requestId !== latestRequestIdRef.current) return

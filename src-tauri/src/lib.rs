@@ -11,8 +11,8 @@ use tauri::{LogicalSize, Manager, RunEvent, WebviewWindow};
 
 const PREFERRED_LOGICAL_WIDTH: f64 = 1360.0;
 const PREFERRED_LOGICAL_HEIGHT: f64 = 860.0;
-const MINIMUM_LOGICAL_WIDTH: f64 = 960.0;
-const MINIMUM_LOGICAL_HEIGHT: f64 = 640.0;
+const MINIMUM_LOGICAL_WIDTH: f64 = 420.0;
+const MINIMUM_LOGICAL_HEIGHT: f64 = 320.0;
 /// Leave a margin around the window on displays smaller than the preferred size.
 const WORK_AREA_FILL_RATIO: f64 = 0.92;
 

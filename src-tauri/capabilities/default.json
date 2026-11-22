@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-window",
-  "description": "Only what the custom title bar uses: drag, minimize, maximize/restore, close, and resize events to track the maximized state.",
+  "description": "Only what the app uses: title-bar drag, minimize, maximize/restore, close, resize events for the maximized state, and the window's own position/size so the chart scan can ignore it.",
   "windows": ["main"],
   "permissions": [
     "core:window:allow-start-dragging",
@@ -10,6 +10,9 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-is-maximized",
+    "core:window:allow-is-minimized",
+    "core:window:allow-outer-position",
+    "core:window:allow-outer-size",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]

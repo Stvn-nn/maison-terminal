@@ -14,6 +14,7 @@ const EMPTY_STATE = {
   computedAt: null,
   datasetVersion: 0,
   hasRetryInput: false,
+  dataOrigin: null, // 'screen' (read off the user's screen, relative scale) | 'file' (CSV prices)
 }
 
 /**
@@ -32,13 +33,13 @@ export function useIndicatorWorkspace() {
   const latestRequestIdRef = useRef(0)
   const inFlightControllerRef = useRef(null)
 
-  const computeSeries = useCallback(async (candles, { sourceName, isNewDataset }) => {
+  const computeSeries = useCallback(async (candles, { sourceName, isNewDataset, dataOrigin }) => {
     latestRequestIdRef.current += 1
     const requestId = latestRequestIdRef.current
     inFlightControllerRef.current?.abort()
     const requestController = new AbortController()
     inFlightControllerRef.current = requestController
-    pendingCandlesRef.current = { candles, sourceName }
+    pendingCandlesRef.current = { candles, sourceName, dataOrigin }
 
     setWorkspaceState((previousState) => ({
       ...previousState,
@@ -58,6 +59,7 @@ export function useIndicatorWorkspace() {
         ...previousState,
         status: chartData.candles.length > 0 ? 'ready' : 'failed',
         chartData,
+        dataOrigin,
         error: chartData.candles.length > 0 ? null : new CandleFileError('The service returned no candles.'),
         computedAt: new Date(),
         datasetVersion: isNewDataset ? previousState.datasetVersion + 1 : previousState.datasetVersion,
@@ -92,8 +94,19 @@ export function useIndicatorWorkspace() {
           candleCount: parsedFile.candles.length,
         },
       }))
-      await computeSeries(parsedFile.candles, { sourceName: candleFile.name, isNewDataset: true })
+      await computeSeries(parsedFile.candles, {
+        sourceName: candleFile.name,
+        isNewDataset: true,
+        dataOrigin: 'file',
+      })
     },
+    [computeSeries],
+  )
+
+  /** Candles read from the screen by the chart watch (relative scale, placeholder times). */
+  const loadScreenCandles = useCallback(
+    (candles, { isNewDataset }) =>
+      computeSeries(candles, { sourceName: 'Your screen', isNewDataset, dataOrigin: 'screen' }),
     [computeSeries],
   )
 
@@ -101,7 +114,11 @@ export function useIndicatorWorkspace() {
     const pending = pendingCandlesRef.current
     if (!pending) return
     const isFirstLoadOfFile = workspaceState.chartData === null
-    computeSeries(pending.candles, { sourceName: pending.sourceName, isNewDataset: isFirstLoadOfFile })
+    computeSeries(pending.candles, {
+      sourceName: pending.sourceName,
+      isNewDataset: isFirstLoadOfFile,
+      dataOrigin: pending.dataOrigin,
+    })
   }, [computeSeries, workspaceState.chartData])
 
   // Recover automatically when the engine comes back after a network failure.
@@ -112,5 +129,11 @@ export function useIndicatorWorkspace() {
 
   useEffect(() => () => inFlightControllerRef.current?.abort(), [])
 
-  return { ...workspaceState, loadCandleFile, retry, canRetry: workspaceState.hasRetryInput }
+  return {
+    ...workspaceState,
+    loadCandleFile,
+    loadScreenCandles,
+    retry,
+    canRetry: workspaceState.hasRetryInput,
+  }
 }
