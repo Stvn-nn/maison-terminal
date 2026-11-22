@@ -1,6 +1,6 @@
 [package]
 name = "maison-terminal"
-version = "0.2.0"
+version = "0.2.1"
 description = "Maison Terminal desktop workspace"
 authors = ["Maison Terminal"]
 license = ""
