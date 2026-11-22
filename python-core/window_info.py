@@ -59,16 +59,29 @@ def parse_chart_title(window_title: str | None) -> ChartTitle | None:
     )
 
 
-def window_title_at(screen_x: int, screen_y: int) -> str | None:
-    """Title of the topmost visible window covering a screen point (Windows only)."""
+@dataclass(frozen=True)
+class ScreenWindow:
+    title: str
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+    @property
+    def area(self) -> int:
+        return max(0, self.right - self.left) * max(0, self.bottom - self.top)
+
+
+def visible_windows() -> list[ScreenWindow]:
+    """Visible, titled, on-screen windows, topmost first (Windows only; [] elsewhere)."""
     if sys.platform != "win32":
-        return None
+        return []
     import ctypes
     from ctypes import wintypes
 
     user32 = ctypes.windll.user32
     dwmapi = ctypes.windll.dwmapi
-    topmost_titles: list[str] = []
+    windows: list[ScreenWindow] = []
     enum_windows_callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
     def visit_window(window_handle: int, _parameter: int) -> bool:
@@ -76,14 +89,6 @@ def window_title_at(screen_x: int, screen_y: int) -> str | None:
             return True
         title_length = user32.GetWindowTextLengthW(window_handle)
         if title_length == 0:
-            return True
-        window_rect = wintypes.RECT()
-        user32.GetWindowRect(window_handle, ctypes.byref(window_rect))
-        covers_point = (
-            window_rect.left <= screen_x < window_rect.right
-            and window_rect.top <= screen_y < window_rect.bottom
-        )
-        if not covers_point:
             return True
         cloaked_flag = ctypes.c_int(0)
         dwmapi.DwmGetWindowAttribute(
@@ -95,8 +100,32 @@ def window_title_at(screen_x: int, screen_y: int) -> str | None:
         user32.GetWindowTextW(window_handle, title_buffer, title_length + 1)
         if any(fragment in title_buffer.value for fragment in EXCLUDED_TITLE_FRAGMENTS):
             return True
-        topmost_titles.append(title_buffer.value)
-        return False  # windows are enumerated top-down; the first match is on top
+        window_rect = wintypes.RECT()
+        user32.GetWindowRect(window_handle, ctypes.byref(window_rect))
+        windows.append(
+            ScreenWindow(
+                title_buffer.value,
+                window_rect.left,
+                window_rect.top,
+                window_rect.right,
+                window_rect.bottom,
+            )
+        )
+        return True
 
     user32.EnumWindows(enum_windows_callback(visit_window), 0)
-    return topmost_titles[0] if topmost_titles else None
+    return windows
+
+
+def window_title_at(screen_x: int, screen_y: int) -> str | None:
+    """Title of the topmost visible window covering a screen point (Windows only)."""
+    for window in visible_windows():
+        if window.left <= screen_x < window.right and window.top <= screen_y < window.bottom:
+            return window.title
+    return None
+
+
+def find_chart_window() -> ScreenWindow | None:
+    """The largest visible window whose title reads like a chart ("SPX 6,910.39 ▼ ...")."""
+    chart_windows = [window for window in visible_windows() if parse_chart_title(window.title)]
+    return max(chart_windows, key=lambda window: window.area, default=None)

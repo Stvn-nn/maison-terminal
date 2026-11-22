@@ -575,19 +575,20 @@ def analyze_and_read_candles(
     color_profile: CandleColorProfile,
     left_margin_pct: float,
     plot_bounds_override: PixelRect | None,
-) -> tuple[VisionAnalysis, list[Candle]]:
+) -> tuple[VisionAnalysis, list[Candle], str | None]:
     """One watch frame: the backtrack verdict plus the candles visible in the plot."""
-    from screen_chart import read_candles  # local import: screen_chart imports this module
+    from screen_chart import read_candles_with_mode  # local import: avoids an import cycle
 
     analysis = analyze_chart_image(image, color_profile, left_margin_pct, plot_bounds_override)
     if analysis.chart_bounds is None or REASON_NO_CHART in analysis.reasons:
-        return analysis, []
+        return analysis, [], None
     plot_bounds = analysis.chart_bounds
     plot_image = image[
         plot_bounds.y : plot_bounds.y + plot_bounds.height,
         plot_bounds.x : plot_bounds.x + plot_bounds.width,
     ]
-    return analysis, read_candles(plot_image)
+    candles, reading_mode = read_candles_with_mode(plot_image)
+    return analysis, candles, reading_mode
 
 
 class VisionService:
@@ -605,6 +606,7 @@ class VisionService:
         self._last_error: str | None = None
         self._screen_candles: list[Candle] = []
         self._screen_candles_captured_at: datetime | None = None
+        self._screen_reading_mode: str | None = None
 
     @property
     def is_running(self) -> bool:
@@ -627,9 +629,11 @@ class VisionService:
 
     def screen_candles(self) -> ScreenCandlesResponse:
         """Candles read from the watched region on the most recent frame."""
+        from screen_chart import MONOCHROME_NOTE  # local import: avoids an import cycle
+
         has_candles = self.is_running and len(self._screen_candles) >= 2
         if has_candles:
-            note = None
+            note = MONOCHROME_NOTE if self._screen_reading_mode == "monochrome" else None
         elif not self.is_running:
             note = "Chart watch is not running"
         else:
@@ -662,9 +666,37 @@ class VisionService:
     async def scan_for_chart(self, scan_request: ChartScanRequest) -> ChartScanResponse:
         """Find the largest coloured-candle chart on any monitor and (optionally) watch it."""
         from screen_chart import locate_chart_region  # local import: avoids an import cycle
+        from window_info import find_chart_window
 
         monitors = await self._run_in_worker(list_monitors)
         physical_monitors = [monitor for monitor in monitors if not monitor.is_virtual_desktop]
+
+        # 1) A window titled like a chart (TradingView: "SPX 6,910.39 ▼ ...") works with any
+        #    colour theme. Watch the part of it that is on a monitor.
+        chart_window = await self._run_in_worker(find_chart_window)
+        if chart_window is not None:
+            for monitor in physical_monitors or monitors:
+                left = max(chart_window.left, monitor.left)
+                top = max(chart_window.top, monitor.top)
+                right = min(chart_window.right, monitor.left + monitor.width)
+                bottom = min(chart_window.bottom, monitor.top + monitor.height)
+                if right - left >= 64 and bottom - top >= 64:
+                    window_region = ScreenRegion(
+                        left=left, top=top, width=right - left, height=bottom - top
+                    )
+                    if scan_request.start_watch:
+                        self.configure(VisionConfig(region=window_region))
+                        await self.start()
+                    return ChartScanResponse(
+                        found=True,
+                        region=window_region,
+                        monitor_index=monitor.index,
+                        candle_columns=0,
+                        message=f"Chart window found: {chart_window.title}",
+                        status=self.status(),
+                    )
+
+        # 2) Otherwise look for green/red candles anywhere on screen.
         best_match = None
         for monitor in physical_monitors or monitors:
             monitor_region = ScreenRegion(
@@ -777,7 +809,7 @@ class VisionService:
 
     async def process_frame(self, frame: np.ndarray, config: VisionConfig) -> VisionAnalysis:
         """Analyse a frame, read its candles, update the debouncer and broadcast transitions."""
-        analysis, candles = await self._run_in_worker(
+        analysis, candles, reading_mode = await self._run_in_worker(
             analyze_and_read_candles,
             frame,
             config.color_profile,
@@ -788,6 +820,7 @@ class VisionService:
         if config is self._config:  # ignore a frame from a region that was just replaced
             self._screen_candles = candles
             self._screen_candles_captured_at = analysis.captured_at
+            self._screen_reading_mode = reading_mode
         transition = self._debouncer.update(analysis)
         if transition == WsEventType.BACKTRACK_REQUIRED:
             await self._broadcaster.broadcast(

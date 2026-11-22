@@ -220,6 +220,102 @@ def _drop_volume_bars(shapes: list[_CandleShape], plot_height: int) -> list[_Can
     return [shape for shape, is_volume in zip(shapes, on_baseline, strict=True) if not is_volume]
 
 
+GLYPH_MAX_HEIGHT_FRACTION = 0.04  # text is short relative to the plot...
+GLYPH_MIN_ASPECT = 0.4  # ...and not as thin as a candle (width >= 0.4 x height)
+
+MONOCHROME_NOTE = (
+    "Single-colour candles: hollow bodies read as up and filled bodies as down; bars too "
+    "thin to show a body use their midpoint as the close."
+)
+
+
+def read_candles_with_mode(plot_image: np.ndarray) -> tuple[list[Candle], str]:
+    """Read coloured candles, falling back to single-colour candles. Returns (candles, mode)."""
+    coloured_candles = read_candles(plot_image)
+    monochrome_candles = read_monochrome_candles(plot_image)
+    # Buttons and labels can look like a few coloured candles on a single-colour chart, so
+    # prefer the reading that finds clearly more candles.
+    if len(monochrome_candles) > 2 * len(coloured_candles):
+        return monochrome_candles, "monochrome"
+    return coloured_candles, "colour"
+
+
+def read_monochrome_candles(plot_image: np.ndarray) -> list[Candle]:
+    """Candles drawn in one colour (e.g. black on a light theme)."""
+    plot_height = plot_image.shape[0]
+    if plot_height < 8:
+        return []
+    background_color = vision.estimate_background_color(plot_image)
+    candle_mask = vision._remove_lines_and_labels(
+        vision.foreground_mask(plot_image, background_color)
+    )
+    # Drop text glyphs (price-axis numbers, legends): short blobs that are not thin and tall.
+    component_count, component_labels, component_stats, _ = cv2.connectedComponentsWithStats(
+        candle_mask.astype(np.uint8), connectivity=8
+    )
+    component_widths = component_stats[:, cv2.CC_STAT_WIDTH]
+    component_heights = component_stats[:, cv2.CC_STAT_HEIGHT]
+    is_glyph = (component_heights <= GLYPH_MAX_HEIGHT_FRACTION * plot_height) & (
+        component_widths >= GLYPH_MIN_ASPECT * component_heights
+    )
+    is_glyph[0] = False
+    if component_count > 1 and is_glyph.any():
+        candle_mask = candle_mask & ~is_glyph[component_labels]
+    occupied_columns = np.flatnonzero(candle_mask.any(axis=0))
+    if occupied_columns.size < 10:
+        return []
+    gap_positions = np.flatnonzero(np.diff(occupied_columns) > 1)
+    run_starts = np.r_[occupied_columns[0], occupied_columns[gap_positions + 1]]
+    run_ends = np.r_[occupied_columns[gap_positions], occupied_columns[-1]]
+    typical_width = max(1, int(np.median(run_ends - run_starts + 1)))
+
+    def to_relative_value(pixel_y: int) -> float:
+        height_share = (plot_height - 1 - pixel_y) / (plot_height - 1)
+        return round(RELATIVE_FLOOR + height_share * RELATIVE_SPAN, 4)
+
+    candles: list[Candle] = []
+    for run_start, run_end in zip(run_starts, run_ends, strict=True):
+        run_width = run_end - run_start + 1
+        is_merged = run_width > 2.5 * typical_width
+        slice_count = max(1, round(run_width / typical_width)) if is_merged else 1
+        slice_edges = np.linspace(run_start, run_end + 1, slice_count + 1).astype(int)
+        for slice_start, slice_stop in zip(slice_edges[:-1], slice_edges[1:], strict=True):
+            bar_pixels = candle_mask[:, slice_start:slice_stop]
+            occupied_rows = np.flatnonzero(bar_pixels.any(axis=1))
+            if occupied_rows.size < 2:
+                continue
+            high_value = to_relative_value(int(occupied_rows[0]))
+            low_value = to_relative_value(int(occupied_rows[-1]))
+            bar_width = bar_pixels.shape[1]
+            row_span = bar_pixels.sum(axis=1)
+            body_rows = (
+                np.flatnonzero(row_span >= max(2, BODY_SPAN_RATIO * bar_width))
+                if bar_width >= 3
+                else np.array([], dtype=int)
+            )
+            if body_rows.size >= 2:
+                body_top, body_bottom = int(body_rows[0]), int(body_rows[-1])
+                interior = bar_pixels[body_top + 1 : body_bottom, bar_width // 2]
+                is_hollow = interior.size > 0 and interior.mean() < 0.5
+                body_high, body_low = to_relative_value(body_top), to_relative_value(body_bottom)
+                open_value, close_value = (
+                    (body_low, body_high) if is_hollow else (body_high, body_low)
+                )
+            else:
+                midpoint = round((high_value + low_value) / 2, 4)
+                open_value = close_value = midpoint
+            candles.append(
+                Candle(
+                    time=SCREEN_TIME_ORIGIN + len(candles) * SCREEN_BAR_SECONDS,
+                    open=open_value,
+                    high=high_value,
+                    low=low_value,
+                    close=close_value,
+                )
+            )
+    return candles
+
+
 def read_candles(plot_image: np.ndarray) -> list[Candle]:
     plot_height = plot_image.shape[0]
     if plot_height < 8:

@@ -630,7 +630,8 @@ function ChartSourceLine({ visibleChartData, dataOrigin, sourceName, computedAt,
   if (dataOrigin === 'screen') {
     const region = screenChart.region
     const regionText = region ? ` (${region.width}×${region.height} px at ${region.left}, ${region.top})` : ''
-    sourceText = `Source: candles read from your screen${regionText} at ${formatClockTime(screenChart.capturedAt)}. Relative scale: 0 = bottom of your chart, 100 = top, not prices.`
+    const readingNote = screenChart.note ? ` ${screenChart.note}` : ''
+    sourceText = `Source: candles read from your screen${regionText} at ${formatClockTime(screenChart.capturedAt)}. Relative scale: 0 = bottom of your chart, 100 = top, not prices.${readingNote}`
   } else {
     sourceText = `Source: prices from ${sourceName ?? 'your CSV file'}.`
   }

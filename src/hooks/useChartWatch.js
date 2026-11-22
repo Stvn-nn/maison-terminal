@@ -13,6 +13,20 @@ export const RESCAN_AFTER_NO_CHART_MS = 20_000
 
 export const ChartWatchContext = createContext(null)
 
+/** Approximate physical-pixel bounds of the browser window (preview / demo only). */
+function browserWindowScreenBounds() {
+  const pixelRatio = window.devicePixelRatio || 1
+  const width = Math.round(window.outerWidth * pixelRatio)
+  const height = Math.round(window.outerHeight * pixelRatio)
+  if (width < 1 || height < 1) return null
+  return {
+    left: Math.round(window.screenX * pixelRatio),
+    top: Math.round(window.screenY * pixelRatio),
+    width,
+    height,
+  }
+}
+
 function readStoredAutoWatch() {
   try {
     return window.localStorage.getItem(AUTO_WATCH_STORAGE_KEY) !== 'false'
@@ -52,7 +66,10 @@ export function useChartWatchController() {
     isScanInFlightRef.current = true
     setScanState((previousState) => ({ ...previousState, phase: 'scanning' }))
     try {
-      const ownWindowBounds = await getOwnWindowScreenBounds().catch(() => null)
+      // Never watch our own window: the desktop app knows its exact bounds; a browser preview
+      // estimates them so the demo cannot end up reading its own chart.
+      const ownWindowBounds =
+        (await getOwnWindowScreenBounds().catch(() => null)) ?? browserWindowScreenBounds()
       const scanResult = await engineApi.scanForChart({
         excludeRegions: ownWindowBounds ? [ownWindowBounds] : [],
         startWatch: true,
