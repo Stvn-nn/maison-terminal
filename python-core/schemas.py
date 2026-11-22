@@ -42,6 +42,25 @@ class Candle(StrictModel):
         return self
 
 
+class FinnhubKeyRequest(StrictModel):
+    api_key: str = Field(
+        min_length=8,
+        max_length=80,
+        pattern=r"^[A-Za-z0-9_\-]+$",
+        description="The user's own Finnhub API key (stored only in the local .env file).",
+    )
+
+
+class FinnhubKeyStatus(BaseModel):
+    """Whether a Finnhub key is set. The key itself is never returned."""
+
+    configured: bool
+    calendar_available: bool | None = Field(
+        default=None,
+        description="False when the key's plan has no economic calendar; None if unknown.",
+    )
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
     service: str = "maison-terminal-core"

@@ -15,6 +15,7 @@ import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 
 import uvicorn
 from fastapi import Depends, FastAPI, Request, WebSocket, WebSocketDisconnect, status
@@ -27,7 +28,7 @@ import indicators
 import market_data
 import news_feed
 import vision
-from config import Settings, finnhub_key, get_settings
+from config import Settings, get_settings
 from errors import ApiError
 from schemas import (
     HealthResponse,
@@ -76,10 +77,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         broadcaster: WebSocketBroadcaster = app.state.broadcaster
         macro_service: news_feed.MacroFeedService = app.state.macro_service
         background_tasks = [asyncio.create_task(broadcaster.run_heartbeat())]
-        if app_settings.macro_poll_enabled and macro_service.is_configured:
-            background_tasks.append(asyncio.create_task(macro_service.run_poller()))
-        elif not macro_service.is_configured:
-            logger.info("FINNHUB_API_KEY not set; macro calendar and news are disabled")
+        macro_service.start_poller()
+        if not macro_service.is_configured:
+            logger.info("No Finnhub key yet; the app will ask the user for one")
         logger.info("Maison Terminal core started on %s:%s", app_settings.host, app_settings.port)
         try:
             yield
@@ -104,6 +104,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.vision_service = vision.VisionService(app_settings, app.state.broadcaster)
     app.state.macro_service = news_feed.MacroFeedService(app_settings, app.state.broadcaster)
     app.state.market_data = market_data.MarketDataService()
+    # Where a key entered in the app is remembered: the .env the engine reads at start-up
+    # (the desktop app runs the engine from its per-user config folder).
+    app.state.key_env_file = Path(".env")
 
     app.add_middleware(
         CORSMiddleware,
@@ -155,7 +158,7 @@ def _register_core_routes(app: FastAPI) -> None:
         return HealthResponse(
             version=SERVICE_VERSION,
             server_time=datetime.now(UTC),
-            finnhub_configured=finnhub_key(request.app.state.settings) is not None,
+            finnhub_configured=request.app.state.macro_service.is_configured,
             vision_running=bool(vision_service and vision_service.is_running),
             websocket_clients=request.app.state.broadcaster.client_count,
         )
