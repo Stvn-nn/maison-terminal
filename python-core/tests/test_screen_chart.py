@@ -124,4 +124,9 @@ def test_candles_endpoint_reports_unavailable_when_idle(client: TestClient) -> N
         "region": None,
         "candles": [],
         "note": "Chart watch is not running",
+        "source_window_title": None,
+        "symbol": None,
+        "title_last_price": None,
+        "title_change": None,
+        "title_direction": None,
     }

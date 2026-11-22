@@ -1066,6 +1066,69 @@
             "default": "screen",
             "title": "Source",
             "type": "string"
+          },
+          "source_window_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Title of the window showing the watched chart.",
+            "title": "Source Window Title"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Instrument parsed from that title.",
+            "title": "Symbol"
+          },
+          "title_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Change as displayed, e.g. '−3.7%'.",
+            "title": "Title Change"
+          },
+          "title_direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Direction"
+          },
+          "title_last_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last price as displayed in the title (text, not a number).",
+            "title": "Title Last Price"
           }
         },
         "required": [

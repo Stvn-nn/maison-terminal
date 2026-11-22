@@ -634,12 +634,29 @@ class VisionService:
             note = "Chart watch is not running"
         else:
             note = "No coloured candles could be read from the watched region"
+        from window_info import parse_chart_title, window_title_at
+
+        region = self._config.region if self._config else None
+        source_window_title = None
+        if region is not None and self.is_running:
+            try:
+                source_window_title = window_title_at(
+                    region.left + region.width // 2, region.top + region.height // 2
+                )
+            except OSError:
+                source_window_title = None
+        chart_title = parse_chart_title(source_window_title)
         return ScreenCandlesResponse(
             available=has_candles,
             captured_at=self._screen_candles_captured_at,
-            region=self._config.region if self._config else None,
+            region=region,
             candles=self._screen_candles if has_candles else [],
             note=note,
+            source_window_title=source_window_title,
+            symbol=chart_title.symbol if chart_title else None,
+            title_last_price=chart_title.last_price if chart_title else None,
+            title_change=chart_title.change if chart_title else None,
+            title_direction=chart_title.direction if chart_title else None,
         )
 
     async def scan_for_chart(self, scan_request: ChartScanRequest) -> ChartScanResponse:

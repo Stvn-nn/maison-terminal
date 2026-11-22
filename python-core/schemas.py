@@ -394,6 +394,15 @@ class ScreenCandlesResponse(BaseModel):
     region: ScreenRegion | None
     candles: list[Candle]
     note: str | None = None
+    source_window_title: str | None = Field(
+        default=None, description="Title of the window showing the watched chart."
+    )
+    symbol: str | None = Field(default=None, description="Instrument parsed from that title.")
+    title_last_price: str | None = Field(
+        default=None, description="Last price as displayed in the title (text, not a number)."
+    )
+    title_change: str | None = Field(default=None, description="Change as displayed, e.g. '−3.7%'.")
+    title_direction: Literal["up", "down"] | None = None
 
 
 # --------------------------------------------------------------------------------------
