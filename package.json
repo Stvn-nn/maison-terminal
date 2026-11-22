@@ -1,7 +1,7 @@
 {
   "name": "maison-terminal",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Maison Terminal desktop workspace (Tauri v2 + React) for the local analytical service.",
   "scripts": {
