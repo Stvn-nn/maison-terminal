@@ -68,7 +68,7 @@ To uninstall, use **Settings → Apps → Installed apps → Maison Terminal →
 
 | Area | What you get |
 |---|---|
-| **Chart** | Two sources: **Screen** (default) reads the candles straight off your broker chart, no file needed; **CSV file** loads real prices from a broker export. Shows candles, EMA 9/21/50/200, Bollinger Bands, and RSI and MACD in their own panes, all computed by the engine (pandas-ta). A line under the chart always says where the data came from. |
+| **Chart** | Three sources: **Screen** (default) follows the broker chart on your screen and shows its live prices once the symbol is recognised; **Pair** charts any stock, ETF, index, forex pair, crypto or future you search for; **CSV file** loads prices from a broker export. Timeframes from 1 minute to 1 month. Shows candles, EMA 9/21/50/200, Bollinger Bands, and RSI and MACD in their own panes, all computed by the engine (pandas-ta). A line under the chart always says where the data came from. |
 | **Python signal** | A combined reading (bullish / bearish / neutral) from five checks. Click it to see what each check found, what it measures, how the score works, and what the reading means for risk. |
 | **Catalyst strip** | Upcoming economic releases from Finnhub, ordered by time and shown in your local time zone. Each has an impact dot (red = high, orange = medium, yellow = low), estimate / previous / actual where available, and a live countdown. Filter by **Impact**: High, Med+ or All. |
 | **Sizing drawer** | Position sizing in three modes. **Risk to stop**: size so hitting your stop loses a set % of equity or a fixed $ amount. **% of equity**: deploy a percentage of your account. **Fixed cash**: deploy a dollar amount. Shows shares, max dollar risk, notional, risk as % of equity, stop distance, 1R/2R/3R targets and warnings. |
@@ -83,17 +83,35 @@ To uninstall, use **Settings → Apps → Installed apps → Maison Terminal →
 
 ### See your chart (no setup)
 
-1. Open your broker chart (for example TradingView in your browser) **beside** Maison Terminal,
-   so both are visible. Charts with green and red candles work best.
+1. Open your broker chart (for example TradingView in your browser) on any monitor, so it is
+   visible.
 2. That's it. Within a few seconds the title bar says **Watching your chart**, and with the
-   chart **Source** set to **Screen** the chart area mirrors your broker chart's candles with
-   the indicators on top.
+   chart **Source** set to **Screen** the chart area follows it.
 
-The screen shows each candle's shape but not its price labels, so the screen chart uses a
-**relative scale**: 0 is the bottom of your chart and 100 the top, with bars numbered left to
-right. Trend and momentum readings (EMA crossovers, RSI, MACD, Bollinger %B) don't depend on
-the price scale, so they match what real prices would give. Click the eye icon in the title
-bar to stop or restart the chart watch.
+When the chart window's title names the instrument (TradingView: "SPX 6,910.39 ▼ −3.7%"), the
+app looks the symbol up and shows its **real, live prices** with the indicators on top,
+refreshed automatically. Pick a timeframe (1m, 5m, 15m, 30m, 1H, D, W, M) at the top left of
+the chart.
+
+If the symbol can't be recognised, the app falls back to the candles it reads off the pixels.
+Those show each candle's shape but not its price, so they use a **relative scale**: 0 is the
+bottom of your chart and 100 the top, with bars numbered left to right.
+
+The watch follows the chart window when you move or resize it or drag it to another monitor.
+If the window is minimised, covered by another window or switched to a non-chart tab, the app
+keeps the last chart, marks it **Chart not in view**, and carries on when the chart is back.
+Click the eye icon in the title bar to stop or restart the chart watch.
+
+### Chart any pair
+
+If the screen reader isn't picking up your chart, or you want a different instrument, switch
+**Source** to **Pair** and start typing in the search box (for example `eur`, `aapl`, `btc`).
+Suggestions appear as you type, each with an icon for its type (stock, ETF, index, forex,
+crypto, futures, fund) and its exchange. Use the arrow keys and Enter, or click one. The pair
+is remembered next time. With no pair chosen the chart shows **No pair selected**.
+
+Symbol search and prices come from Yahoo Finance's public data, fetched by the engine. Quotes
+may be delayed, and 1-minute bars go back about a week.
 
 ### Load real prices from a file (optional)
 
@@ -132,7 +150,7 @@ Every panel says where its data came from:
 
 | Panel | Source shown |
 |---|---|
-| Chart | "Candles read from your screen (region, time)" or "Prices from your-file.csv", plus when the engine computed the indicators |
+| Chart | "SPX recognised from your chart window title; ^SPX prices from Yahoo Finance", "Candles read from your screen (region, time)" or "Prices from your-file.csv", plus when the engine computed the indicators |
 | Python signal | The same chart source, and that the engine computed it with pandas-ta |
 | Catalyst strip | Finnhub, fetched by the engine, with the last update time |
 | Sizing drawer | "Calculated by the Maison engine from the numbers you entered", with the time |
@@ -302,12 +320,14 @@ The installer is written to `src-tauri/target/release/bundle/nsis/`.
 
 ## Known limitations
 
-- **No price feed.** The Screen source shows candle shapes on a relative scale (no price
-  labels are read); real prices need a CSV export.
+- **Live prices are unofficial and may be delayed.** They come from Yahoo Finance's public
+  endpoints, which have no service guarantee; a broker CSV export always works offline.
+- **Symbol recognition needs the ticker in the window title.** Otherwise the Screen source
+  shows candle shapes on a relative scale; use the Pair source instead.
 - **Screen reading needs coloured candles.** Hollow or single-colour candle styles can be
   watched for backtrack alerts but their candles are not read yet.
-- **Your chart must be visible.** The chart watch reads what is on screen, so a chart hidden
-  behind Maison Terminal or minimised can't be seen.
+- **Your chart must be visible to be read.** A hidden chart is marked "not in view" (live
+  prices keep updating when its symbol is known).
 - **Economic calendar needs a paid Finnhub plan.** News works with a free key.
 - **Unsigned installer.** Code signing is needed to avoid SmartScreen and Smart App Control
   blocks.
