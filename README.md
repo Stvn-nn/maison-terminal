@@ -6,11 +6,11 @@
 </h1>
 
 <p align="center">
-  <a href="https://github.com/Stvn-nn/maison-terminal/releases/latest/download/Maison-Terminal_x64-setup.exe"><strong>⬇ Download the Windows installer (latest version)</strong></a>
+  <a href="https://github.com/Stvn-nn/maison-terminal/releases/download/v0.2.1/Maison-Terminal_x64-setup.exe"><strong>⬇ Download the Windows installer (v0.2.1, 64 MB)</strong></a>
   <br>
   <sub>Windows 10/11 (64-bit) · per-user installer, no admin rights · analytical engine included, no Python needed</sub>
   <br>
-  <sub><a href="https://github.com/Stvn-nn/maison-terminal/releases/latest">Release notes</a> · <a href="https://github.com/Stvn-nn/maison-terminal/releases">All releases</a></sub>
+  <sub><a href="https://github.com/Stvn-nn/maison-terminal/releases/tag/v0.2.1">Release notes</a> · <a href="https://github.com/Stvn-nn/maison-terminal/releases">All releases</a></sub>
 </p>
 
 <p align="center">
@@ -44,10 +44,10 @@ packaged into a standalone program) and starts it when you open the app.
 
 ## Download and install
 
-1. [Download **`Maison-Terminal_x64-setup.exe`**](https://github.com/Stvn-nn/maison-terminal/releases/latest/download/Maison-Terminal_x64-setup.exe).
-   This link always gives the [latest release](https://github.com/Stvn-nn/maison-terminal/releases/latest),
-   which is rebuilt automatically whenever `main` changes. No GitHub account is needed.
-   Older versions are under [Releases](https://github.com/Stvn-nn/maison-terminal/releases).
+1. [Download **`Maison-Terminal_x64-setup.exe`** (v0.2.1)](https://github.com/Stvn-nn/maison-terminal/releases/download/v0.2.1/Maison-Terminal_x64-setup.exe)
+   from the [v0.2.1 release](https://github.com/Stvn-nn/maison-terminal/releases/tag/v0.2.1).
+   No GitHub account is needed. Other versions are under
+   [Releases](https://github.com/Stvn-nn/maison-terminal/releases).
    To update, run the newer installer over the installed app; your settings are kept.
 2. Run the installer. It installs for your Windows user only, with no administrator rights.
 3. Open **Maison Terminal** from the Start menu. The title bar shows **Starting engine…**,
@@ -302,7 +302,7 @@ the interface's lint and tests, and builds the installer with the engine inside.
 
 On `main` it also publishes the installer as the latest GitHub Release, tagged with the version
 in `src-tauri/tauri.conf.json`, under both its versioned name and the fixed name
-`Maison-Terminal_x64-setup.exe` that the permanent download link uses. Bump the version there
+`Maison-Terminal_x64-setup.exe` (also reachable at `releases/latest/download/Maison-Terminal_x64-setup.exe`). Bump the version there
 (and in `package.json`, `src-tauri/Cargo.toml` and `python-core/main.py`) to start a new
 release; otherwise the current release's installer is replaced. To grab a build from any branch:
 
