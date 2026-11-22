@@ -1,9 +1,11 @@
-import { ChevronRight, LoaderCircle, Scale } from 'lucide-react'
+import { ChevronRight, Info, LoaderCircle, Scale } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 
+import { useMediaQuery } from '../hooks/useMediaQuery.js'
 import { sizingRequestKey, usePositionSizing } from '../hooks/usePositionSizing.js'
 import { cn } from '../lib/cn.js'
-import { formatCurrency, formatPercentPoints, formatPrice, formatQuantity } from '../lib/format.js'
+import { formatClockTime, formatCurrency, formatPercentPoints, formatPrice, formatQuantity } from '../lib/format.js'
+import { explainSizingResult } from '../lib/riskExplanation.js'
 import {
   EMPTY_FORM_VALUES,
   FIELD_DEFINITIONS,
@@ -16,6 +18,8 @@ import EngineStartHint from './EngineStartHint.jsx'
 import SegmentedControl from './SegmentedControl.jsx'
 
 const DRAWER_OPEN_STORAGE_KEY = 'maison.sizingDrawer.open'
+/** Below this width the open drawer floats over the chart instead of taking space. */
+const NARROW_WINDOW_QUERY = '(max-width: 899px)'
 
 function readStoredDrawerOpen() {
   try {
@@ -96,6 +100,14 @@ export default function SizingDrawer() {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
   const sizing = usePositionSizing()
   const panelId = useId()
+  const isNarrowWindow = useMediaQuery(NARROW_WINDOW_QUERY)
+  const [wasNarrowWindow, setWasNarrowWindow] = useState(isNarrowWindow)
+
+  // Collapse once when the window becomes narrow; the user can still reopen it.
+  if (isNarrowWindow !== wasNarrowWindow) {
+    setWasNarrowWindow(isNarrowWindow)
+    if (isNarrowWindow) setIsOpen(false)
+  }
 
   useEffect(() => {
     try {
@@ -137,8 +149,13 @@ export default function SizingDrawer() {
     <aside
       aria-label="Position sizing"
       className={cn(
-        'relative flex shrink-0 border-l border-divider bg-surface transition-[width] duration-200 ease-out',
-        isOpen ? 'w-[min(340px,40vw)] min-w-[300px]' : 'w-11',
+        'flex shrink-0 border-l border-divider bg-surface transition-[width] duration-200 ease-out',
+        !isOpen && 'relative w-11',
+        isOpen && !isNarrowWindow && 'relative w-[min(340px,40vw)] min-w-[300px]',
+        // Narrow windows: float over the chart instead of squeezing it.
+        isOpen &&
+          isNarrowWindow &&
+          'absolute inset-y-0 right-0 z-30 w-[min(340px,calc(100vw-1rem))] shadow-[-12px_0_40px_rgba(0,0,0,0.55)]',
       )}
     >
       <button
@@ -299,6 +316,31 @@ export default function SizingDrawer() {
                     ))}
                   </ul>
                 )}
+
+                <section aria-label="What this means" className="flex flex-col gap-2 border-t border-divider pt-3">
+                  <h3 className="text-[10px] font-medium tracking-[0.14em] text-muted uppercase">What this means</h3>
+                  <ul className="flex flex-col gap-1.5">
+                    {explainSizingResult(sizingResult).map((explanation) => (
+                      <li
+                        key={explanation.key}
+                        className={cn(
+                          'text-[12px] leading-snug',
+                          explanation.tone === 'caution' ? 'text-caution' : 'text-bone/85',
+                        )}
+                      >
+                        {explanation.text}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="flex gap-1.5 text-[10px] leading-snug text-muted" data-selectable>
+                    <Info size={11} aria-hidden="true" className="mt-px shrink-0" />
+                    <span>
+                      Source: calculated by the Maison engine from the numbers you entered
+                      {sizing.completedAt ? ` at ${formatClockTime(sizing.completedAt)}` : ''}. Shares are whole
+                      units unless fractional shares is on. A sizing aid, not financial advice.
+                    </span>
+                  </p>
+                </section>
               </section>
             )}
           </div>
