@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 import indicators
+import market_data
 import news_feed
 import vision
 from config import Settings, finnhub_key, get_settings
@@ -90,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             await macro_service.aclose()
+            await app.state.market_data.aclose()
 
     app = FastAPI(
         title="Maison Terminal Core",
@@ -101,6 +103,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.broadcaster = WebSocketBroadcaster()
     app.state.vision_service = vision.VisionService(app_settings, app.state.broadcaster)
     app.state.macro_service = news_feed.MacroFeedService(app_settings, app.state.broadcaster)
+    app.state.market_data = market_data.MarketDataService()
 
     app.add_middleware(
         CORSMiddleware,
@@ -114,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(indicators.build_router(require_api_token))
     app.include_router(vision.build_router(require_api_token))
     app.include_router(news_feed.build_router(require_api_token))
+    app.include_router(market_data.build_router(require_api_token))
     _register_websocket(app)
     return app
 
