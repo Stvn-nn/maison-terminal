@@ -42,6 +42,11 @@ function InsightSection({ title, source, children }) {
   )
 }
 
+const MARKET_SYMBOL_SOURCES = {
+  window_title: 'From the chart window title',
+  pair: 'Chosen pair · prices from Yahoo Finance',
+}
+
 function MutedLine({ children }) {
   return <p className="text-[12px] text-muted">{children}</p>
 }
@@ -52,7 +57,10 @@ function MutedLine({ children }) {
  */
 export default function InsightsPanel({ sizingResult }) {
   const { chartInsights } = useChartInsights()
-  const instrument = useMemo(() => describeInstrument(chartInsights.symbol), [chartInsights.symbol])
+  const instrument = useMemo(
+    () => describeInstrument(chartInsights.symbol, chartInsights.assetKind),
+    [chartInsights.symbol, chartInsights.assetKind],
+  )
   const calendar = useEconomicCalendar({ minimumImpact: 'medium' })
   const sentimentState = useSymbolSentiment(chartInsights.symbol)
   const currentTime = useCurrentTime(1_000)
@@ -63,20 +71,22 @@ export default function InsightsPanel({ sizingResult }) {
   const highImpactCount = upcomingReleases.filter((release) => release.impact === 'high').length
   const summary = chartInsights.summary
   const dataSourceLabel =
-    chartInsights.dataOrigin === 'screen'
-      ? 'Your screen · relative scale'
-      : chartInsights.dataOrigin === 'file'
-        ? chartInsights.sourceName
-        : null
+    {
+      screen: 'Your screen · relative scale',
+      market: `${chartInsights.sourceName ?? 'Live prices'} · Yahoo Finance`,
+      file: chartInsights.sourceName,
+    }[chartInsights.dataOrigin] ?? null
 
   return (
     <div className="flex flex-col gap-3">
-      <InsightSection title="Market" source={chartInsights.symbolSource === 'window_title' ? 'From the chart window title' : null}>
+      <InsightSection title="Market" source={MARKET_SYMBOL_SOURCES[chartInsights.symbolSource] ?? null}>
         {instrument.symbol ? (
           <div className="flex items-baseline justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate font-serif text-[22px] leading-none font-semibold text-bone">{instrument.symbol}</p>
-              <p className="mt-1 text-[11px] text-muted">{instrument.description}</p>
+              <p className="mt-1 truncate text-[11px] text-muted">
+                {[chartInsights.instrumentName, instrument.description].filter(Boolean).join(' · ')}
+              </p>
             </div>
             {chartInsights.titleLastPrice && (
               <div className="shrink-0 text-right tabular-figures">

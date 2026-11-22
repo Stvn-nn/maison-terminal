@@ -87,9 +87,12 @@ export default function SignalPanel({ summary, dataOrigin }) {
               <Info size={12} aria-hidden="true" className="mt-px shrink-0" />
               <span>
                 Source:{' '}
-                {dataOrigin === 'screen'
-                  ? 'candles read from your screen (relative scale). These checks depend only on the chart’s shape, so the reading matches what the real prices would give.'
-                  : 'prices from your CSV file.'}{' '}
+                {{
+                  screen:
+                    'candles read from your screen (relative scale: the chart’s shape, not its prices). Pick the pair, or show its ticker in the chart window title, for live prices.',
+                  market: 'live prices from Yahoo Finance (may be delayed).',
+                  file: 'prices from your CSV file.',
+                }[dataOrigin] ?? 'the chart data.'}{' '}
                 Computed by the Maison engine with pandas-ta. A description of the chart, not financial advice.
               </span>
             </p>

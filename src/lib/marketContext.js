@@ -8,15 +8,18 @@ const CURRENCY_COUNTRIES = {
   CNY: 'CN', CNH: 'CN', HKD: 'HK', SEK: 'SE', NOK: 'NO', MXN: 'MX', ZAR: 'ZA', SGD: 'SG',
 }
 const CRYPTO_BASES = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'LTC', 'BNB', 'AVAX', 'DOT']
-const US_INSTRUMENTS = /^(SPX|SPY|ES1?!?|MES1?!?|NDX|NQ1?!?|QQQ|DJI|DIA|YM1?!?|RUT|IWM|VIX|DXY|US\d{2,3})$/
+const US_INSTRUMENTS = /^(SPX|GSPC|SPY|ES1?!?|MES1?!?|NDX|IXIC|NQ1?!?|QQQ|DJI|DIA|YM1?!?|RUT|IWM|VIX|DXY|US\d{2,3})$/
+const ASSET_KIND_DESCRIPTIONS = { stock: 'Stock', etf: 'ETF', index: 'Index', future: 'Futures', fund: 'Fund' }
 
 /**
+ * @param {string|null} symbol  As shown on a chart ("EURUSD") or by the price provider ("EURUSD=X", "^GSPC").
+ * @param {string|null} [assetKind]  Asset type from the symbol search, when known.
  * @returns {{symbol: string|null, kind: 'forex'|'crypto'|'us_index'|'other'|'unknown',
  *            countries: string[], description: string}}
  */
-export function describeInstrument(symbol) {
+export function describeInstrument(symbol, assetKind = null) {
   if (!symbol) return { symbol: null, kind: 'unknown', countries: [], description: 'Symbol not detected' }
-  const normalized = symbol.toUpperCase().replace(/[/_-]/g, '')
+  const normalized = symbol.toUpperCase().replace(/=X$/, '').replace(/^\^/, '').replace(/[/_-]/g, '')
 
   const baseCurrency = normalized.slice(0, 3)
   const quoteCurrency = normalized.slice(3, 6)
@@ -41,7 +44,7 @@ export function describeInstrument(symbol) {
   if (US_INSTRUMENTS.test(normalized)) {
     return { symbol, kind: 'us_index', countries: ['US'], description: 'US index / ETF' }
   }
-  return { symbol, kind: 'other', countries: [], description: 'Instrument' }
+  return { symbol, kind: 'other', countries: [], description: ASSET_KIND_DESCRIPTIONS[assetKind] ?? 'Instrument' }
 }
 
 /** Releases in the next `horizonMs`, limited to the instrument's economies when known. */

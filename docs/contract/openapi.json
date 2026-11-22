@@ -750,6 +750,100 @@
         "title": "LinePoint",
         "type": "object"
       },
+      "MarketCandlesResponse": {
+        "properties": {
+          "candles": {
+            "items": {
+              "$ref": "#/components/schemas/Candle"
+            },
+            "title": "Candles",
+            "type": "array"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange"
+          },
+          "interval": {
+            "title": "Interval",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "stock",
+              "etf",
+              "index",
+              "forex",
+              "crypto",
+              "future",
+              "fund",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Price"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "source": {
+            "default": "Yahoo Finance (unofficial public data; may be delayed)",
+            "title": "Source",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "kind",
+          "currency",
+          "exchange",
+          "interval",
+          "last_price",
+          "candles"
+        ],
+        "title": "MarketCandlesResponse",
+        "type": "object"
+      },
       "MonitorInfo": {
         "properties": {
           "height": {
@@ -1032,6 +1126,12 @@
               }
             ],
             "title": "Captured At"
+          },
+          "in_view": {
+            "default": true,
+            "description": "False while the chart is out of view; candles are then the last reading.",
+            "title": "In View",
+            "type": "boolean"
           },
           "note": {
             "anyOf": [
@@ -1586,6 +1686,77 @@
         "title": "SwingPoint",
         "type": "object"
       },
+      "SymbolMatch": {
+        "properties": {
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange"
+          },
+          "kind": {
+            "enum": [
+              "stock",
+              "etf",
+              "index",
+              "forex",
+              "crypto",
+              "future",
+              "fund",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "kind",
+          "exchange"
+        ],
+        "title": "SymbolMatch",
+        "type": "object"
+      },
+      "SymbolSearchResponse": {
+        "properties": {
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/SymbolMatch"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "source": {
+            "default": "Yahoo Finance (unofficial public data; may be delayed)",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "matches"
+        ],
+        "title": "SymbolSearchResponse",
+        "type": "object"
+      },
       "SymbolSentimentResponse": {
         "properties": {
           "articles_analysed": {
@@ -1898,6 +2069,12 @@
       },
       "VisionStatus": {
         "properties": {
+          "chart_in_view": {
+            "default": true,
+            "description": "False while the followed chart window is minimised, covered or not a chart.",
+            "title": "Chart In View",
+            "type": "boolean"
+          },
           "config": {
             "anyOf": [
               {
@@ -2274,6 +2451,105 @@
         "summary": "Symbol Sentiment",
         "tags": [
           "macro"
+        ]
+      }
+    },
+    "/api/v1/market/candles": {
+      "get": {
+        "operationId": "market_candles_api_v1_market_candles_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "maxLength": 30,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9.=^\\-_:]+$",
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "required": false,
+            "schema": {
+              "default": "5m",
+              "title": "Interval",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketCandlesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Market Candles",
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/api/v1/market/search": {
+      "get": {
+        "operationId": "search_symbols_api_v1_market_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 40,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SymbolSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Symbols",
+        "tags": [
+          "market"
         ]
       }
     },

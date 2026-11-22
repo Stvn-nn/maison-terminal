@@ -69,9 +69,10 @@ function EngineStatus() {
   )
 }
 
-function describeChartWatch({ isConnected, isAutoWatchEnabled, isWatching, visionState, scanState }) {
+function describeChartWatch({ isConnected, isAutoWatchEnabled, isWatching, visionState, scanState, isChartInView }) {
   if (!isConnected) return { label: 'Chart watch · waiting for engine', tone: 'muted' }
   if (!isAutoWatchEnabled && !isWatching) return { label: 'Chart watch off', tone: 'muted' }
+  if (isWatching && !isChartInView) return { label: 'Watching · chart not in view', tone: 'muted' }
   if (scanState.phase === 'scanning') return { label: 'Looking for a chart…', tone: 'accent' }
   if (isWatching) {
     if (visionState === 'backtrack_required') return { label: 'Watching · history needed', tone: 'accent' }
