@@ -9,7 +9,12 @@ import { useOnEngineConnected, useTerminalEvent } from './useTerminalSocket.js'
  * can arrive at all (the watch must be configured and started on the service).
  */
 export function useVisionStatus() {
-  const [visionStatus, setVisionStatus] = useState({ state: 'unknown', running: false, lastError: null })
+  const [visionStatus, setVisionStatus] = useState({
+    state: 'unknown',
+    running: false,
+    lastError: null,
+    region: null,
+  })
 
   const refreshVisionStatus = useCallback(async () => {
     try {
@@ -18,6 +23,7 @@ export function useVisionStatus() {
         state: statusBody.state ?? 'unknown',
         running: Boolean(statusBody.running),
         lastError: statusBody.last_error ?? null,
+        region: statusBody.config?.region ?? null,
       })
     } catch {
       setVisionStatus((previousStatus) => ({ ...previousStatus, state: 'unknown' }))
@@ -29,5 +35,5 @@ export function useVisionStatus() {
   useTerminalEvent('BACKTRACK_REQUIRED', refreshVisionStatus)
   useTerminalEvent('BACKTRACK_CLEARED', refreshVisionStatus)
 
-  return visionStatus
+  return { ...visionStatus, refresh: refreshVisionStatus }
 }

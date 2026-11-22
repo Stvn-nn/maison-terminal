@@ -182,4 +182,23 @@ export const engineApi = {
   getVisionStatus({ signal } = {}) {
     return requestJson('/api/v1/vision/status', { signal, timeoutMs: 3_000 })
   },
+
+  /** Ask the engine to find a chart on screen (ignoring `excludeRegions`) and watch it. */
+  scanForChart({ excludeRegions = [], startWatch = true, signal } = {}) {
+    return requestJson('/api/v1/vision/scan', {
+      method: 'POST',
+      body: { exclude_regions: excludeRegions, start_watch: startWatch },
+      signal,
+      timeoutMs: 15_000,
+    })
+  },
+
+  stopChartWatch({ signal } = {}) {
+    return requestJson('/api/v1/vision/stop', { method: 'POST', signal, timeoutMs: 5_000 })
+  },
+
+  /** Candles read from the watched screen region (relative scale, placeholder times). */
+  getScreenCandles({ signal } = {}) {
+    return requestJson('/api/v1/vision/candles', { signal, timeoutMs: 5_000 })
+  },
 }
