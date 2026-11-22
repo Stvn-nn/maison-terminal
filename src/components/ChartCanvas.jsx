@@ -1,4 +1,4 @@
-import { AlertTriangle, EyeOff, FileUp, Info, LoaderCircle, RotateCcw, ScanEye } from 'lucide-react'
+import { AlertTriangle, FileUp, Info, LoaderCircle, RotateCcw, ScanEye } from 'lucide-react'
 import {
   CandlestickSeries,
   ColorType,
@@ -514,7 +514,14 @@ export default function ChartCanvas() {
   }, [liveFeed, chartSource, loadLiveCandles])
 
   // Only show data that belongs to the selected source (and, for Pair, the selected pair).
-  const isScreenWatchOff = isScreenSource && !chartWatch.isWatching
+  // The Screen source shows a chart only while a chart is actually being read: when the watch
+  // is off, finds nothing, or the chart is minimised/covered, it shows the MT mark instead.
+  const isScreenChartInView = screenChart.isInView && chartWatch.isChartInView
+  const isScreenBeingRead =
+    chartWatch.isWatching &&
+    isScreenChartInView &&
+    (workspace.dataOrigin === 'market' || chartWatch.visionState !== 'no_chart')
+  const isScreenWatchOff = isScreenSource && !isScreenBeingRead
   const isPairDataCurrent = !isPairSource || (selectedPair !== null && workspace.sourceName === marketSourceName)
   const visibleChartData =
     workspace.loadedForSource === chartSource && !isScreenWatchOff && isPairDataCurrent ? workspace.chartData : null
@@ -601,8 +608,6 @@ export default function ChartCanvas() {
   const fileNotice = workspace.fileNotice
   const canRetryFailure = workspace.status === 'failed' && workspace.canRetry && workspace.error?.isRecoverable
   const showFileFailure = chartSource === 'file' && workspace.status === 'failed'
-  const isScreenChartAway =
-    isScreenSource && hasChartData && (!screenChart.isInView || !chartWatch.isChartInView)
   const showTimeframes = (isPairSource && selectedPair !== null) || (isScreenSource && isShowingMarketPrices)
   const titleInstrument = isPairSource ? selectedPair : isShowingMarketPrices ? marketInstrument : null
 
@@ -715,28 +720,14 @@ export default function ChartCanvas() {
       <div className="relative min-h-0 flex-1">
         <div
           ref={chartContainerRef}
-          className={cn(
-            'absolute inset-0 transition-[opacity,filter] duration-300',
-            isScreenChartAway && isRelativeScale && 'opacity-40 grayscale',
-          )}
+          className="absolute inset-0"
           data-testid="chart-container"
         />
 
-        {(showTimeframes || isScreenChartAway) && (
-          // Top-left, clear of the price axis; wraps onto two rows in a narrow window.
+        {showTimeframes && (
+          // Top-left, clear of the price axis.
           <div className="pointer-events-none absolute top-2 right-20 left-2 z-20 flex flex-wrap items-center gap-2 [&>*]:pointer-events-auto">
-            {showTimeframes && <TimeframeBar value={timeframe} onChange={setTimeframe} />}
-            {isScreenChartAway && (
-              <div
-                role="status"
-                className="flex items-center gap-1.5 rounded-full border border-divider bg-obsidian/90 px-3 py-1 text-[11px] text-bone backdrop-blur-sm"
-              >
-                <EyeOff size={12} aria-hidden="true" className="shrink-0 text-muted" />
-                {isRelativeScale
-                  ? 'Chart not in view · showing the last reading'
-                  : 'Chart window not in view · prices still live'}
-              </div>
-            )}
+            <TimeframeBar value={timeframe} onChange={setTimeframe} />
           </div>
         )}
 
@@ -823,17 +814,17 @@ function LogoState({ statusLine, children }) {
   )
 }
 
-/** Screen source with nothing to draw: just the MT mark and one line of status. */
+/** Screen source with no chart being read: the MT mark and "No chart seen". */
 function ScreenSourceState({ chartWatch, screenChart }) {
   const isOff = !chartWatch.isAutoWatchEnabled && !chartWatch.isWatching
-  let statusLine = 'No chart detected'
-  if (isOff) statusLine = 'Chart watch is off'
-  else if (chartWatch.isWatching && !chartWatch.isChartInView) statusLine = 'Chart not in view'
-  else if (chartWatch.isWatching && chartWatch.visionState !== 'no_chart') {
-    statusLine = screenChart.status === 'unreadable' ? 'Chart detected · candles can’t be read' : 'Reading chart…'
+  const isChartVisible = chartWatch.isWatching && chartWatch.isChartInView && screenChart.isInView
+  let statusLine = 'No chart seen'
+  if (isChartVisible && chartWatch.visionState !== 'no_chart') {
+    statusLine = screenChart.status === 'unreadable' ? 'Chart seen · candles can’t be read' : 'Reading chart…'
   }
   return (
     <LogoState statusLine={statusLine}>
+      {isOff && <p className="text-[12px] text-muted">Chart watch is off</p>}
       {isOff && (
         <button type="button" onClick={chartWatch.startWatching} className={PRIMARY_PILL_CLASS}>
           <ScanEye size={13} aria-hidden="true" /> Turn on chart watch

@@ -3,6 +3,7 @@ import CatalystFeed from './components/CatalystFeed.jsx'
 import ChartCanvas from './components/ChartCanvas.jsx'
 import ChartInsightsProvider from './components/ChartInsightsProvider.jsx'
 import ChartWatchProvider from './components/ChartWatchProvider.jsx'
+import FinnhubKeyProvider from './components/FinnhubKeyProvider.jsx'
 import SizingDrawer from './components/SizingDrawer.jsx'
 import TitleBar from './components/TitleBar.jsx'
 
@@ -11,6 +12,7 @@ export default function App() {
   return (
     <ChartWatchProvider>
       <ChartInsightsProvider>
+      <FinnhubKeyProvider>
       <div className="flex h-full min-h-0 flex-col bg-obsidian text-bone">
         <TitleBar />
         <CatalystFeed />
@@ -22,6 +24,7 @@ export default function App() {
           <SizingDrawer />
         </main>
       </div>
+      </FinnhubKeyProvider>
       </ChartInsightsProvider>
     </ChartWatchProvider>
   )

@@ -207,6 +207,21 @@ export const engineApi = {
     return requestJson('/api/v1/vision/candles', { signal, timeoutMs: 5_000 })
   },
 
+  /** Whether the engine has a Finnhub key (the key itself is never returned). */
+  getFinnhubKeyStatus({ signal } = {}) {
+    return requestJson('/api/v1/macro/key', { signal, timeoutMs: 5_000 })
+  },
+
+  /** Give the engine the user's own Finnhub key; it is checked with Finnhub, then saved locally. */
+  saveFinnhubKey(apiKey, { signal } = {}) {
+    return requestJson('/api/v1/macro/key', {
+      method: 'PUT',
+      body: { api_key: apiKey },
+      signal,
+      timeoutMs: 20_000,
+    })
+  },
+
   /** Type-ahead symbol suggestions (stocks, ETFs, indices, forex, crypto, futures). */
   searchSymbols(query, { signal } = {}) {
     return requestJson('/api/v1/market/search', { query: { q: query }, signal, timeoutMs: 8_000 })
