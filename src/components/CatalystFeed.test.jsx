@@ -1,6 +1,7 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { FinnhubKeyContext } from '../hooks/useFinnhubKey.js'
 import { TerminalSocketContext } from '../hooks/useTerminalSocket.js'
 import { TerminalSocketClient } from '../services/terminalSocket.js'
 import { FakeWebSocket } from '../test/fakeWebSocket.js'
@@ -10,11 +11,18 @@ function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
-function renderFeed() {
+// TEST FIXTURE ONLY: a key context with no key saved yet.
+function keyContextStub(overrides = {}) {
+  return { status: 'missing', calendarAvailable: null, keyVersion: 0, isDialogOpen: false, openKeyDialog: vi.fn(), dismissKeyDialog: vi.fn(), saveKey: vi.fn(), ...overrides }
+}
+
+function renderFeed(keyContext = keyContextStub()) {
   const socketClient = new TerminalSocketClient({ url: 'ws://test/ws', WebSocketImplementation: FakeWebSocket })
   return render(
     <TerminalSocketContext.Provider value={socketClient}>
-      <CatalystFeed />
+      <FinnhubKeyContext.Provider value={keyContext}>
+        <CatalystFeed />
+      </FinnhubKeyContext.Provider>
     </TerminalSocketContext.Provider>,
   )
 }
@@ -71,5 +79,19 @@ describe('CatalystFeed', () => {
     renderFeed()
     expect(await screen.findByText('Feed unavailable')).toBeInTheDocument()
     expect(screen.getByText('Economic calendar requires a paid Finnhub plan')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Add key/ })).not.toBeInTheDocument()
+  })
+
+  it('offers Add key next to the warning when no key is set', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({ error: { code: 'finnhub_not_configured', message: 'no key', details: null } }, 503),
+      ),
+    )
+    const keyContext = keyContextStub()
+    renderFeed(keyContext)
+    fireEvent.click(await screen.findByRole('button', { name: /Add key/ }))
+    expect(keyContext.openKeyDialog).toHaveBeenCalled()
   })
 })

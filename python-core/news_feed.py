@@ -14,6 +14,7 @@ The API key is sent in the ``X-Finnhub-Token`` header (never in URLs) and is nev
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import logging
 import re
@@ -21,6 +22,7 @@ import time
 from collections import deque
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from typing import Any, TypeVar
 
 import httpx
@@ -31,6 +33,8 @@ from errors import ApiError
 from schemas import (
     EconomicCalendarResponse,
     EconomicEvent,
+    FinnhubKeyRequest,
+    FinnhubKeyStatus,
     HeadlineSentiment,
     ImpactLevel,
     MacroEventUpcomingData,
@@ -327,24 +331,84 @@ class MacroFeedService:
                 http_client,
             )
         )
+        self._http_client = http_client
         self._alerted_event_ids: set[str] = set()
         self._seen_news_ids: set[int] | None = None
         self._calendar_polling_available = True
+        self._poller_task: asyncio.Task[None] | None = None
 
     @property
     def is_configured(self) -> bool:
         return self._client is not None
+
+    def key_status(self) -> FinnhubKeyStatus:
+        return FinnhubKeyStatus(
+            configured=self._client is not None,
+            calendar_available=(False if not self._calendar_polling_available else None)
+            if self._client is not None
+            else None,
+        )
+
+    def start_poller(self) -> None:
+        """Run the background calendar/news poller once a key is configured (idempotent)."""
+        if not self._settings.macro_poll_enabled or self._client is None:
+            return
+        if self._poller_task is None or self._poller_task.done():
+            self._poller_task = asyncio.create_task(self.run_poller(), name="macro-poller")
+
+    async def set_api_key(self, api_key: str) -> FinnhubKeyStatus:
+        """Check a key against Finnhub and, if it works, start using it immediately.
+
+        News is free; the economic calendar needs a paid plan, so a valid free key is
+        accepted and reported with ``calendar_available=False``.
+        """
+        candidate_client = FinnhubClient(
+            api_key,
+            self._settings.finnhub_base_url,
+            SlidingWindowRateLimiter(self._settings.finnhub_calls_per_minute),
+            self._http_client,
+        )
+        try:
+            await candidate_client.get_json("/news", {"category": "general"})
+        except ApiError as check_error:
+            if self._http_client is None:
+                await candidate_client.aclose()
+            if check_error.error_code == "finnhub_unauthorized":
+                raise ApiError(
+                    422, "finnhub_key_invalid", "Finnhub didn't accept that key"
+                ) from check_error
+            raise
+        try:
+            today = self._clock().date().isoformat()
+            await candidate_client.get_json("/calendar/economic", {"from": today, "to": today})
+            calendar_available = True
+        except ApiError:
+            calendar_available = False
+
+        previous_client = self._client
+        self._client = candidate_client
+        self._cache = TtlCache()
+        self._seen_news_ids = None
+        self._calendar_polling_available = True
+        if previous_client is not None and self._http_client is None:
+            await previous_client.aclose()
+        self.start_poller()
+        return FinnhubKeyStatus(configured=True, calendar_available=calendar_available)
 
     def _require_client(self) -> FinnhubClient:
         if self._client is None:
             raise ApiError(
                 503,
                 "finnhub_not_configured",
-                "Set FINNHUB_API_KEY to enable the economic calendar and news feed",
+                "Add a Finnhub API key to enable the economic calendar and news feed",
             )
         return self._client
 
     async def aclose(self) -> None:
+        if self._poller_task is not None:
+            self._poller_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._poller_task
         if self._client is not None:
             await self._client.aclose()
 
@@ -565,6 +629,26 @@ class MacroFeedService:
 # --------------------------------------------------------------------------------------
 
 
+ENV_FILE_KEY_NAMES = ("MT_FINNHUB_API_KEY", "FINNHUB_API_KEY")
+
+
+def save_key_to_env_file(api_key: str, env_file_path: Path) -> None:
+    """Store the key in .env (the file the engine reads at start-up), keeping other lines.
+
+    The engine runs from the app's own config folder, so this is per Windows user. The key
+    has already been validated against a strict character set, so it cannot inject lines.
+    """
+    existing_lines = (
+        env_file_path.read_text(encoding="utf-8").splitlines() if env_file_path.exists() else []
+    )
+    kept_lines = [
+        line for line in existing_lines if line.split("=", 1)[0].strip() not in ENV_FILE_KEY_NAMES
+    ]
+    kept_lines.append(f"MT_FINNHUB_API_KEY={api_key}")
+    env_file_path.parent.mkdir(parents=True, exist_ok=True)
+    env_file_path.write_text("\n".join(kept_lines) + "\n", encoding="utf-8")
+
+
 def _macro_service(request: Request) -> MacroFeedService:
     return request.app.state.macro_service
 
@@ -598,5 +682,25 @@ def build_router(auth_dependency: Callable[..., Any]) -> APIRouter:
         request: Request, symbol: str = Query(max_length=20)
     ) -> SymbolSentimentResponse:
         return await _macro_service(request).get_symbol_sentiment(symbol)
+
+    @router.get("/key", response_model=FinnhubKeyStatus)
+    async def finnhub_key_status(request: Request) -> FinnhubKeyStatus:
+        return _macro_service(request).key_status()
+
+    @router.put("/key", response_model=FinnhubKeyStatus)
+    async def save_finnhub_key(
+        key_request: FinnhubKeyRequest, request: Request
+    ) -> FinnhubKeyStatus:
+        """Check the user's key with Finnhub, use it right away, and remember it in .env."""
+        key_status = await _macro_service(request).set_api_key(key_request.api_key)
+        env_file_path: Path = request.app.state.key_env_file
+        try:
+            save_key_to_env_file(key_request.api_key, env_file_path)
+        except OSError as write_error:
+            logger.warning("Could not save the Finnhub key to %s: %s", env_file_path, write_error)
+            raise ApiError(
+                500, "key_not_saved", "The key works but couldn't be saved for next time"
+            ) from write_error
+        return key_status
 
     return router

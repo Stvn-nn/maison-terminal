@@ -368,6 +368,50 @@
         "title": "ExcludedRegion",
         "type": "object"
       },
+      "FinnhubKeyRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "description": "The user's own Finnhub API key (stored only in the local .env file).",
+            "maxLength": 80,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_\\-]+$",
+            "title": "Api Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_key"
+        ],
+        "title": "FinnhubKeyRequest",
+        "type": "object"
+      },
+      "FinnhubKeyStatus": {
+        "description": "Whether a Finnhub key is set. The key itself is never returned.",
+        "properties": {
+          "calendar_available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "False when the key's plan has no economic calendar; None if unknown.",
+            "title": "Calendar Available"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured"
+        ],
+        "title": "FinnhubKeyStatus",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2129,7 +2173,7 @@
   "info": {
     "description": "Local analytical sidecar for the Maison Terminal desktop app.",
     "title": "Maison Terminal Core",
-    "version": "0.2.0"
+    "version": "0.2.1"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -2334,6 +2378,67 @@
           }
         },
         "summary": "Economic Calendar",
+        "tags": [
+          "macro"
+        ]
+      }
+    },
+    "/api/v1/macro/key": {
+      "get": {
+        "operationId": "finnhub_key_status_api_v1_macro_key_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinnhubKeyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Finnhub Key Status",
+        "tags": [
+          "macro"
+        ]
+      },
+      "put": {
+        "description": "Check the user's key with Finnhub, use it right away, and remember it in .env.",
+        "operationId": "save_finnhub_key_api_v1_macro_key_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinnhubKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinnhubKeyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Finnhub Key",
         "tags": [
           "macro"
         ]

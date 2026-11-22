@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, KeyRound, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useEconomicCalendar } from '../hooks/useEconomicCalendar.js'
+import { useFinnhubKey } from '../hooks/useFinnhubKey.js'
 import { cn } from '../lib/cn.js'
 import EngineStartHint from './EngineStartHint.jsx'
 import SegmentedControl from './SegmentedControl.jsx'
@@ -28,12 +29,15 @@ const IMPACT_FILTERS = [
 const UNAVAILABLE_REASONS = {
   engine_unreachable: 'Analytical service offline',
   request_timeout: 'Analytical service not responding',
-  finnhub_not_configured: 'No Finnhub API key configured on the analytical service',
+  finnhub_not_configured: 'Add your free Finnhub key to see news and upcoming releases',
   finnhub_premium_required: 'Economic calendar requires a paid Finnhub plan',
-  finnhub_unauthorized: 'Finnhub rejected the service’s API key',
+  finnhub_unauthorized: 'Finnhub rejected the saved API key',
   finnhub_rate_limited: 'Finnhub rate limit reached; retrying shortly',
   finnhub_unavailable: 'Finnhub is not reachable from the analytical service',
 }
+
+/** Errors the user can fix by entering (or replacing) their Finnhub key. */
+const KEY_FIXABLE_ERRORS = new Set(['finnhub_not_configured', 'finnhub_unauthorized'])
 
 function describeFeedError(feedError) {
   return UNAVAILABLE_REASONS[feedError?.code] ?? feedError?.message ?? 'Feed unavailable'
@@ -102,6 +106,13 @@ function ReleaseItem({ release, currentTime }) {
 export default function CatalystFeed() {
   const [minimumImpact, setMinimumImpact] = useState('medium')
   const calendar = useEconomicCalendar({ minimumImpact })
+  const finnhubKey = useFinnhubKey()
+  // Reload as soon as the user saves a key, instead of waiting for the next refresh.
+  const { refresh: refreshCalendar } = calendar
+  const savedKeyVersion = finnhubKey.keyVersion
+  useEffect(() => {
+    if (savedKeyVersion > 0) refreshCalendar()
+  }, [savedKeyVersion, refreshCalendar])
   const currentTime = useCurrentTime(1_000)
   const scrollContainerRef = useRef(null)
   const timeZoneLabel = useMemo(() => localTimeZoneLabel(), [])
@@ -127,6 +138,15 @@ export default function CatalystFeed() {
         title={describeFeedError(calendar.error)}
       >
         <span className="shrink-0 font-medium text-loss">Feed unavailable</span>
+        {KEY_FIXABLE_ERRORS.has(calendar.error?.code) && (
+          <button
+            type="button"
+            onClick={finnhubKey.openKeyDialog}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/50 px-2.5 py-0.5 text-[11px] font-medium text-bone transition-colors hover:border-accent hover:bg-accent/15"
+          >
+            <KeyRound size={11} aria-hidden="true" /> Add key
+          </button>
+        )}
         <span aria-hidden="true">·</span>
         <span className="truncate">{describeFeedError(calendar.error)}</span>
         {calendar.error?.code === 'engine_unreachable' && <EngineStartHint className="hidden xl:inline" />}

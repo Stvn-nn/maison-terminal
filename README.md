@@ -73,7 +73,7 @@ To uninstall, use **Settings → Apps → Installed apps → Maison Terminal →
 | **Catalyst strip** | Upcoming economic releases from Finnhub, ordered by time and shown in your local time zone. Each has an impact dot (red = high, orange = medium, yellow = low), estimate / previous / actual where available, and a live countdown. Filter by **Impact**: High, Med+ or All. |
 | **Sizing drawer** | Position sizing in three modes. **Risk to stop**: size so hitting your stop loses a set % of equity or a fixed $ amount. **% of equity**: deploy a percentage of your account. **Fixed cash**: deploy a dollar amount. Shows shares, max dollar risk, notional, risk as % of equity, stop distance, 1R/2R/3R targets and warnings. |
 | **Insights tab** | Next to **Size** in the drawer. Shows the **market** you're watching (symbol, last price and change read from your chart window's title), the **technical analysis** in use and each indicator's reading, **upcoming releases** for that market's economies (e.g. US for SPX, euro area + US for EURUSD) and what they mean for risk, **news sentiment** for the symbol, and what your **last sizing** risks, each with its source. |
-| **No chart** | When nothing is detected, the chart area shows just the MT logo and *No chart detected*. |
+| **No chart** | Whenever no chart is being read (none found, minimised or covered), the chart area shows just the MT logo and *No chart seen*. |
 | **Chart watch** | Starts automatically: the app finds your broker chart on screen (ignoring its own window) and watches it, re-scanning if you move it. When the major swing high or low sits at the left edge, or too few swings are visible, a banner says *"Historical Context Needed: Please scroll back on your trading chart."* The banner hides itself once structure is visible again. |
 | **Status** | The title bar shows engine connection state and chart-watch state. If the engine drops, panels keep their last data marked as stale and reconnect automatically. |
 
@@ -98,8 +98,8 @@ Those show each candle's shape but not its price, so they use a **relative scale
 bottom of your chart and 100 the top, with bars numbered left to right.
 
 The watch follows the chart window when you move or resize it or drag it to another monitor.
-If the window is minimised, covered by another window or switched to a non-chart tab, the app
-keeps the last chart, marks it **Chart not in view**, and carries on when the chart is back.
+If the window is minimised, covered by another window or switched to a non-chart tab, the chart
+area shows the MT logo and *No chart seen* until the chart is back in view.
 Click the eye icon in the title bar to stop or restart the chart watch.
 
 ### Chart any pair
@@ -162,6 +162,12 @@ chart instead of squeezing it.
 
 ## Configuration
 
+**Finnhub key (news and economic calendar).** The first time you open the app, it asks for
+your own free Finnhub key: sign up at [finnhub.io/register](https://finnhub.io/register), copy
+the key from your dashboard and paste it in. The engine checks it with Finnhub and saves it on
+this computer only. Close the box with **×** to skip it; **Add key** next to *Feed unavailable*
+in the catalyst strip brings it back. Everything else in the app works without a key.
+
 The bundled engine reads settings from a `.env` file in the app's config folder:
 
 ```
@@ -170,7 +176,7 @@ The bundled engine reads settings from a `.env` file in the app's config folder:
 
 | Setting | Purpose |
 |---|---|
-| `FINNHUB_API_KEY=...` | Enables the catalyst strip and news. The economic calendar needs a **paid** Finnhub plan; with a free key the strip explains that the calendar is unavailable. |
+| `MT_FINNHUB_API_KEY=...` | The Finnhub key (`FINNHUB_API_KEY` also works); the app writes this line when you add a key. The economic calendar needs a **paid** Finnhub plan; with a free key the strip explains that the calendar is unavailable. |
 | `MT_MACRO_ALERT_LEAD_MINUTES=15` | How early to announce upcoming high-impact releases. |
 | `MT_VISION_INTERVAL_SECONDS=0.75` | How often the chart watch captures the screen. |
 | `MT_VISION_CONFIRM_FRAMES=3` | Frames needed before the backtrack banner appears or clears. |

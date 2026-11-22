@@ -325,3 +325,82 @@ class TestMacroEndpoints:
         with TestClient(create_app(settings)) as configured_client:
             response = configured_client.get("/api/v1/macro/news", params={"category": "sports"})
             assert response.json()["error"]["code"] == "invalid_category"
+
+
+# --------------------------------------------------------------------------------------
+# The user's own Finnhub key: config aliases, saving to .env, and the /key routes
+# --------------------------------------------------------------------------------------
+
+USER_KEY = "userkey1234567890"  # noqa: S105 - fixture value only
+
+
+def test_finnhub_key_is_read_from_env_file_under_either_name(tmp_path, monkeypatch) -> None:
+    from config import Settings, finnhub_key
+
+    for variable_name in ("FINNHUB_API_KEY", "MT_FINNHUB_API_KEY"):
+        env_file = tmp_path / f"{variable_name}.env"
+        env_file.write_text(f"{variable_name}={USER_KEY}\n", encoding="utf-8")
+        assert finnhub_key(Settings(_env_file=env_file)) == USER_KEY
+
+
+def test_saving_the_key_keeps_other_settings_and_replaces_old_keys(tmp_path) -> None:
+    from news_feed import save_key_to_env_file
+
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "MT_VISION_INTERVAL_SECONDS=1\nFINNHUB_API_KEY=oldkey\nMT_FINNHUB_API_KEY=olderkey\n",
+        encoding="utf-8",
+    )
+    save_key_to_env_file(USER_KEY, env_file)
+    assert env_file.read_text(encoding="utf-8").splitlines() == [
+        "MT_VISION_INTERVAL_SECONDS=1",
+        f"MT_FINNHUB_API_KEY={USER_KEY}",
+    ]
+
+
+@pytest.fixture
+def keyless_client(tmp_path):
+    settings = build_test_settings(finnhub_base_url=FINNHUB_BASE_URL)
+    with TestClient(create_app(settings)) as test_client:
+        test_client.app.state.key_env_file = tmp_path / ".env"
+        yield test_client
+
+
+class TestFinnhubKeyRoutes:
+    def test_status_reports_no_key(self, keyless_client: TestClient) -> None:
+        assert keyless_client.get("/api/v1/macro/key").json() == {
+            "configured": False,
+            "calendar_available": None,
+        }
+
+    @respx.mock(base_url=FINNHUB_BASE_URL)
+    def test_valid_free_key_is_used_immediately_and_saved(
+        self, keyless_client: TestClient, respx_mock: respx.MockRouter
+    ) -> None:
+        respx_mock.get("/news").respond(json=NEWS_PAYLOAD)
+        respx_mock.get("/calendar/economic").respond(status_code=403)
+        response = keyless_client.put("/api/v1/macro/key", json={"api_key": USER_KEY})
+        assert response.status_code == 200
+        assert response.json() == {"configured": True, "calendar_available": False}
+        saved_env = keyless_client.app.state.key_env_file.read_text(encoding="utf-8")
+        assert f"MT_FINNHUB_API_KEY={USER_KEY}" in saved_env
+        assert keyless_client.get("/health").json()["finnhub_configured"] is True
+        assert keyless_client.get("/api/v1/macro/news").status_code == 200
+
+    @respx.mock(base_url=FINNHUB_BASE_URL)
+    def test_rejected_key_is_not_saved(
+        self, keyless_client: TestClient, respx_mock: respx.MockRouter
+    ) -> None:
+        respx_mock.get("/news").respond(status_code=401)
+        response = keyless_client.put("/api/v1/macro/key", json={"api_key": USER_KEY})
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "finnhub_key_invalid"
+        assert not keyless_client.app.state.key_env_file.exists()
+        assert keyless_client.get("/api/v1/macro/key").json()["configured"] is False
+
+    def test_key_with_unsafe_characters_is_refused(self, keyless_client: TestClient) -> None:
+        response = keyless_client.put(
+            "/api/v1/macro/key", json={"api_key": "abc12345\nMT_AUTH_TOKEN=x"}
+        )
+        assert response.status_code == 422
+        assert not keyless_client.app.state.key_env_file.exists()

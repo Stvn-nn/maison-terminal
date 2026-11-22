@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,8 +40,12 @@ class Settings(BaseSettings):
         ]
     )
 
-    # Finnhub. ``FINNHUB_API_KEY`` (no prefix) is also accepted, see finnhub_key().
-    finnhub_api_key: SecretStr | None = None
+    # Finnhub. Read from MT_FINNHUB_API_KEY or FINNHUB_API_KEY, in the environment or in .env
+    # (the desktop app saves the key the user enters to .env as MT_FINNHUB_API_KEY).
+    finnhub_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("MT_FINNHUB_API_KEY", "FINNHUB_API_KEY", "finnhub_api_key"),
+    )
     finnhub_base_url: str = "https://finnhub.io/api/v1"
     finnhub_calls_per_minute: int = 55
     calendar_cache_seconds: int = 60

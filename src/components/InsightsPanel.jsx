@@ -14,7 +14,7 @@ const BIAS_DOT_CLASS = { bullish: 'bg-gain', bearish: 'bg-loss', neutral: 'bg-mu
 const IMPACT_DOT_CLASS = { high: 'bg-impact-high', medium: 'bg-impact-medium', low: 'bg-impact-low' }
 const FEED_REASONS = {
   engine_unreachable: 'Engine offline',
-  finnhub_not_configured: 'Needs a Finnhub API key on the engine',
+  finnhub_not_configured: 'Needs your Finnhub key (Add key in the catalyst strip)',
   finnhub_premium_required: 'Needs a paid Finnhub plan',
   finnhub_unauthorized: 'Finnhub rejected the API key',
   finnhub_rate_limited: 'Finnhub rate limit; retrying',
