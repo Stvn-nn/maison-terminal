@@ -68,19 +68,34 @@ To uninstall, use **Settings → Apps → Installed apps → Maison Terminal →
 
 | Area | What you get |
 |---|---|
-| **Chart** | TradingView Lightweight Charts with candles, volume, EMA 9/21/50/200, Bollinger Bands, and RSI and MACD in their own panes. All indicators are computed by the engine (pandas-ta). The engine also returns a combined *Python signal* (bullish/bearish/neutral) from the core strategy. |
+| **Chart** | Two sources: **Screen** (default) reads the candles straight off your broker chart, no file needed; **CSV file** loads real prices from a broker export. Shows candles, EMA 9/21/50/200, Bollinger Bands, and RSI and MACD in their own panes, all computed by the engine (pandas-ta). A line under the chart always says where the data came from. |
+| **Python signal** | A combined reading (bullish / bearish / neutral) from five checks. Click it to see what each check found, what it measures, how the score works, and what the reading means for risk. |
 | **Catalyst strip** | Upcoming economic releases from Finnhub, ordered by time and shown in your local time zone. Each has an impact dot (red = high, orange = medium, yellow = low), estimate / previous / actual where available, and a live countdown. Filter by **Impact**: High, Med+ or All. |
-| **Sizing drawer** | Position sizing in three modes. **Risk to stop**: size so hitting your stop loses a set % of equity or a fixed $ amount. **% of equity**: deploy a percentage of your account. **Fixed cash**: deploy a dollar amount. Shows shares, max dollar risk, notional, risk as % of equity, stop distance, 1R/2R/3R targets and warnings. |
-| **Chart watch** | The engine watches a region of your screen (your broker's chart). When the major swing high or low sits at the left edge, or too few swings are visible, a banner says *"Historical Context Needed: Please scroll back on your trading chart."* The banner hides itself once structure is visible again. |
+| **Sizing drawer** | Position sizing in three modes. **Risk to stop**: size so hitting your stop loses a set % of equity or a fixed $ amount. **% of equity**: deploy a percentage of your account. **Fixed cash**: deploy a dollar amount. Shows shares, max dollar risk, notional, risk as % of equity, stop distance, 1R/2R/3R targets and warnings, plus a **What this means** section that explains the risk in plain words. |
+| **Chart watch** | Starts automatically: the app finds your broker chart on screen (ignoring its own window) and watches it, re-scanning if you move it. When the major swing high or low sits at the left edge, or too few swings are visible, a banner says *"Historical Context Needed: Please scroll back on your trading chart."* The banner hides itself once structure is visible again. |
 | **Status** | The title bar shows engine connection state and chart-watch state. If the engine drops, panels keep their last data marked as stale and reconnect automatically. |
 
 ---
 
 ## Using the app
 
-### Load chart data
+### See your chart (no setup)
 
-The engine has no market-data feed yet, so the chart works from **your broker's CSV export**:
+1. Open your broker chart (for example TradingView in your browser) **beside** Maison Terminal,
+   so both are visible. Charts with green and red candles work best.
+2. That's it. Within a few seconds the title bar says **Watching your chart**, and with the
+   chart **Source** set to **Screen** the chart area mirrors your broker chart's candles with
+   the indicators on top.
+
+The screen shows each candle's shape but not its price labels, so the screen chart uses a
+**relative scale**: 0 is the bottom of your chart and 100 the top, with bars numbered left to
+right. Trend and momentum readings (EMA crossovers, RSI, MACD, Bollinger %B) don't depend on
+the price scale, so they match what real prices would give. Click the eye icon in the title
+bar to stop or restart the chart watch.
+
+### Load real prices from a file (optional)
+
+For actual prices, switch **Source** to **CSV file** and load your broker's export:
 
 1. Click **Open CSV export…** in the chart area.
 2. Pick a CSV with a header row containing `time`, `open`, `high`, `low`, `close`, and
@@ -104,26 +119,23 @@ fill in the fields and press **Calculate**.
   to the previous inputs.
 - Errors from the engine (for example a stop on the wrong side of entry) appear under the field
   they belong to.
+- **What this means** explains the result: what you lose if the stop is hit (and as a share of
+  your account), the position's value, what each R target would gain, and how the risk compares
+  with the common 1–2% rule of thumb. It's a sizing aid, not financial advice.
 
-### Turn on the chart watch
+### Where the data comes from
 
-Tell the engine where your broker chart is on screen (physical pixels), then start it. From
-PowerShell, while the app is open:
+Every panel says where its data came from:
 
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/api/v1/vision/monitors
-```
+| Panel | Source shown |
+|---|---|
+| Chart | "Candles read from your screen (region, time)" or "Prices from your-file.csv", plus when the engine computed the indicators |
+| Python signal | The same chart source, and that the engine computed it with pandas-ta |
+| Catalyst strip | Finnhub, fetched by the engine, with the last update time |
+| Sizing drawer | "Calculated by the Maison engine from the numbers you entered", with the time |
 
-```powershell
-Invoke-RestMethod -Method Put http://127.0.0.1:8000/api/v1/vision/config -ContentType "application/json" -Body '{"region":{"left":100,"top":150,"width":1600,"height":900}}'
-```
-
-```powershell
-Invoke-RestMethod -Method Post http://127.0.0.1:8000/api/v1/vision/start
-```
-
-The title bar changes from *Chart watch off* to the live state. Stop it with
-`Invoke-RestMethod -Method Post http://127.0.0.1:8000/api/v1/vision/stop`.
+The window can be resized down to 420×320; on narrow windows the sizing drawer floats over the
+chart instead of squeezing it.
 
 ---
 
@@ -158,7 +170,8 @@ Finnhub key stays in the engine and is never sent to the desktop UI.
 | Windows blocks the installer or app | It is unsigned. See the note under [Download and install](#download-and-install). |
 | Catalyst strip says **Feed unavailable** | The reason is shown next to it: no Finnhub key, a free plan (the calendar needs a paid plan), or Finnhub unreachable. |
 | Chart says **Couldn't load the chart** | The message names the problem, for example a missing column or the row the engine rejected. Fix the file and open it again. |
-| Chart watch never shows a banner | Confirm it is started (title bar shows a state other than *Chart watch off*) and that the region covers the chart's plot area. |
+| Title bar says **No chart on screen** | Put your broker chart beside Maison Terminal so both are visible (not behind it or minimised), with green/red candles. It re-checks every few seconds; click **Scan now** in the chart area to check immediately. |
+| Chart watch never shows a banner | The banner only appears when the structure is cut off at the left edge. Check that the title bar says **Watching your chart**. |
 | Engine already running separately | The app detects a healthy engine on port 8000 and uses it instead of starting its own. |
 
 ---
@@ -286,10 +299,13 @@ The installer is written to `src-tauri/target/release/bundle/nsis/`.
 
 ## Known limitations
 
-- **No live market data yet.** The chart uses CSV exports; the engine has no price-history or
-  streaming endpoint.
+- **No price feed.** The Screen source shows candle shapes on a relative scale (no price
+  labels are read); real prices need a CSV export.
+- **Screen reading needs coloured candles.** Hollow or single-colour candle styles can be
+  watched for backtrack alerts but their candles are not read yet.
+- **Your chart must be visible.** The chart watch reads what is on screen, so a chart hidden
+  behind Maison Terminal or minimised can't be seen.
 - **Economic calendar needs a paid Finnhub plan.** News works with a free key.
-- **Chart watch is set up through the API.** The app does not yet have a region picker.
 - **Unsigned installer.** Code signing is needed to avoid SmartScreen and Smart App Control
   blocks.
 - **Windows only** for the packaged app.
