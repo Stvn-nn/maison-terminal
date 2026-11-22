@@ -120,6 +120,7 @@ def test_candles_endpoint_reports_unavailable_when_idle(client: TestClient) -> N
         "available": False,
         "source": "screen",
         "scale": "relative",
+        "in_view": True,
         "captured_at": None,
         "region": None,
         "candles": [],

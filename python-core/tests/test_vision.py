@@ -245,3 +245,96 @@ class TestVisionEndpoints:
             json={"region": {"left": 0, "top": 0, "width": 10, "height": 10}},
         )
         assert response.status_code == 422
+
+
+# --------------------------------------------------------------------------------------
+# Multi-monitor clipping and following a chart window
+# --------------------------------------------------------------------------------------
+
+
+def _monitor(index: int, left: int, top: int, width: int, height: int):
+    from schemas import MonitorInfo
+
+    return MonitorInfo(
+        index=index, left=left, top=top, width=width, height=height, is_virtual_desktop=index == 0
+    )
+
+
+DUAL_MONITORS = [
+    _monitor(0, -1920, 0, 4480, 1600),  # virtual desktop spanning both
+    _monitor(1, 0, 0, 2560, 1600),  # primary
+    _monitor(2, -1920, 200, 1920, 1080),  # secondary, left of the primary
+]
+
+
+def test_clip_picks_the_monitor_showing_most_of_the_window() -> None:
+    from vision import clip_to_best_monitor
+
+    # Mostly on the left (secondary) monitor, a little on the primary.
+    monitor, region = clip_to_best_monitor(-1800, 300, 200, 1100, DUAL_MONITORS)
+    assert monitor.index == 2
+    assert region == ScreenRegion(left=-1800, top=300, width=1800, height=800)
+
+
+def test_clip_handles_a_window_only_on_the_secondary_monitor() -> None:
+    from vision import clip_to_best_monitor
+
+    monitor, region = clip_to_best_monitor(-1500, 400, -300, 1000, DUAL_MONITORS)
+    assert monitor.index == 2
+    assert region.width == 1200
+
+
+def test_clip_rejects_a_window_that_is_off_screen() -> None:
+    from vision import clip_to_best_monitor
+
+    assert clip_to_best_monitor(5000, 5000, 6000, 6000, DUAL_MONITORS) is None
+
+
+async def test_hidden_chart_window_keeps_last_candles_and_reports_out_of_view(monkeypatch) -> None:
+    import window_info
+    from schemas import Candle
+
+    vision_service = VisionService(build_test_settings(), WebSocketBroadcaster())
+    chart_window = window_info.ScreenWindow("SPX 6,910.39 ▼ −3.7%", 0, 0, 1200, 800, handle=42)
+    vision_service.configure(
+        VisionConfig(region=ScreenRegion(left=0, top=0, width=1200, height=800)),
+        tracked_window=chart_window,
+    )
+    vision_service._screen_candles = [
+        Candle(time=1, open=150, high=160, low=140, close=155),
+        Candle(time=2, open=155, high=170, low=150, close=165),
+    ]
+    monkeypatch.setattr(window_info, "window_by_handle", lambda handle: None)  # minimised
+    visibility, region = vision_service._follow_tracked_window()
+    assert (visibility, region) == ("hidden", None)
+
+    vision_service._chart_in_view = False
+    monkeypatch.setattr(VisionService, "is_running", property(lambda self: True))
+    response = vision_service.screen_candles()
+    assert response.available is True
+    assert response.in_view is False
+    assert len(response.candles) == 2
+    assert response.symbol == "SPX"
+    await vision_service.shutdown()
+
+
+async def test_followed_window_moving_to_another_monitor_updates_the_region(monkeypatch) -> None:
+    import window_info
+
+    vision_service = VisionService(build_test_settings(), WebSocketBroadcaster())
+    vision_service._monitors = DUAL_MONITORS
+    vision_service.configure(
+        VisionConfig(region=ScreenRegion(left=100, top=100, width=1200, height=800)),
+        tracked_window=window_info.ScreenWindow("EURUSD 1.0975", 100, 100, 1300, 900, handle=7),
+    )
+    vision_service._monitors = DUAL_MONITORS
+    moved_window = window_info.ScreenWindow("EURUSD 1.0975", -1700, 300, -500, 1100, handle=7)
+    monkeypatch.setattr(window_info, "window_by_handle", lambda handle: moved_window)
+    monkeypatch.setattr(window_info, "covered_fraction", lambda window: 0.0)
+    visibility, region = vision_service._follow_tracked_window()
+    assert visibility == "visible"
+    assert region == ScreenRegion(left=-1700, top=300, width=1200, height=800)
+
+    monkeypatch.setattr(window_info, "covered_fraction", lambda window: 0.8)
+    assert vision_service._follow_tracked_window() == ("covered", None)
+    await vision_service.shutdown()

@@ -29,6 +29,7 @@ import base64
 import binascii
 import contextlib
 import logging
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -101,6 +102,7 @@ MAX_DECODED_IMAGE_PIXELS = 40_000_000
 ERROR_BACKOFF_SECONDS = 2.0
 
 REASON_NO_CHART = "no_chart_detected"
+CHART_OUT_OF_VIEW_NOTE = "Chart not in view (minimised, covered or switched away)"
 REASON_HISTORY_START = "history_start_visible"
 REASON_MAJOR_HIGH_AT_EDGE = "major_high_at_left_edge"
 REASON_MAJOR_LOW_AT_EDGE = "major_low_at_left_edge"
@@ -131,6 +133,43 @@ def capture_region(region: ScreenRegion) -> np.ndarray:
     )
     bgra_pixels = np.asarray(screenshot)
     return cv2.cvtColor(bgra_pixels, cv2.COLOR_BGRA2BGR)
+
+
+MIN_WATCH_SIDE_PX = 64
+# A tracked chart window counts as hidden when another window covers this share of it.
+COVERED_FRACTION_LIMIT = 0.5
+
+
+def clip_to_best_monitor(
+    left: int, top: int, right: int, bottom: int, monitors: list[MonitorInfo]
+) -> tuple[MonitorInfo, ScreenRegion] | None:
+    """The monitor showing the largest part of a window, and that visible part.
+
+    Works across any number of monitors (including ones left of or above the primary, which
+    have negative coordinates). A window straddling two screens is watched on the screen that
+    shows most of it; mss captures each region independently, so any monitor works.
+    """
+    physical_monitors = [monitor for monitor in monitors if not monitor.is_virtual_desktop]
+    best_clip: tuple[int, MonitorInfo, ScreenRegion] | None = None
+    for monitor in physical_monitors or monitors:
+        clipped_left = max(left, monitor.left)
+        clipped_top = max(top, monitor.top)
+        clipped_right = min(right, monitor.left + monitor.width)
+        clipped_bottom = min(bottom, monitor.top + monitor.height)
+        clipped_width = clipped_right - clipped_left
+        clipped_height = clipped_bottom - clipped_top
+        if clipped_width < MIN_WATCH_SIDE_PX or clipped_height < MIN_WATCH_SIDE_PX:
+            continue
+        overlap_area = clipped_width * clipped_height
+        if best_clip is None or overlap_area > best_clip[0]:
+            best_clip = (
+                overlap_area,
+                monitor,
+                ScreenRegion(
+                    left=clipped_left, top=clipped_top, width=clipped_width, height=clipped_height
+                ),
+            )
+    return (best_clip[1], best_clip[2]) if best_clip else None
 
 
 def list_monitors() -> list[MonitorInfo]:
@@ -607,6 +646,12 @@ class VisionService:
         self._screen_candles: list[Candle] = []
         self._screen_candles_captured_at: datetime | None = None
         self._screen_reading_mode: str | None = None
+        # The chart window being followed (found by its title); None for a fixed region.
+        self._tracked_window_handle: int | None = None
+        self._tracked_window_title: str | None = None
+        self._tracked_symbol: str | None = None
+        self._chart_in_view = True
+        self._monitors: list[MonitorInfo] = []
 
     @property
     def is_running(self) -> bool:
@@ -619,20 +664,69 @@ class VisionService:
             config=self._config,
             last_analysis=self._last_analysis,
             last_error=self._last_error,
+            chart_in_view=self._chart_in_view if self.is_running else True,
         )
 
-    def configure(self, config: VisionConfig) -> None:
+    def configure(self, config: VisionConfig, tracked_window: Any | None = None) -> None:
+        """Watch a region; ``tracked_window`` (a ScreenWindow) makes the watch follow it."""
+        from window_info import parse_chart_title
+
         self._config = config
         self._debouncer.reset()
         self._screen_candles = []
         self._screen_candles_captured_at = None
+        self._chart_in_view = True
+        self._tracked_window_handle = tracked_window.handle if tracked_window else None
+        self._tracked_window_title = tracked_window.title if tracked_window else None
+        chart_title = parse_chart_title(self._tracked_window_title)
+        self._tracked_symbol = chart_title.symbol if chart_title else None
+
+    def _follow_tracked_window(self) -> tuple[str, ScreenRegion | None]:
+        """Where the tracked chart window is now: ("visible", region) or (reason, None).
+
+        Runs in the worker thread before every frame, so the watch follows the window when it
+        is moved, resized or dragged to another monitor.
+        """
+        from window_info import covered_fraction, parse_chart_title, window_by_handle
+
+        window = window_by_handle(self._tracked_window_handle or 0)
+        if window is None:
+            return "hidden", None  # closed, minimised or on another virtual desktop
+        self._tracked_window_title = window.title
+        chart_title = parse_chart_title(window.title)
+        if chart_title is None:
+            return "not_chart", None  # e.g. the browser switched to a non-chart tab
+        if chart_title.symbol != self._tracked_symbol:
+            # Same window, new instrument: the old candles describe a different chart.
+            self._tracked_symbol = chart_title.symbol
+            self._screen_candles = []
+            self._screen_candles_captured_at = None
+            self._debouncer.reset()
+        if covered_fraction(window) >= COVERED_FRACTION_LIMIT:
+            return "covered", None
+        if not self._monitors:
+            self._monitors = list_monitors()
+        clipped = clip_to_best_monitor(
+            window.left, window.top, window.right, window.bottom, self._monitors
+        )
+        if clipped is None:
+            self._monitors = list_monitors()  # a monitor may have been unplugged or added
+            clipped = clip_to_best_monitor(
+                window.left, window.top, window.right, window.bottom, self._monitors
+            )
+        if clipped is None:
+            return "off_screen", None
+        return "visible", clipped[1]
 
     def screen_candles(self) -> ScreenCandlesResponse:
         """Candles read from the watched region on the most recent frame."""
         from screen_chart import MONOCHROME_NOTE  # local import: avoids an import cycle
 
         has_candles = self.is_running and len(self._screen_candles) >= 2
-        if has_candles:
+        in_view = self._chart_in_view or not self.is_running
+        if not in_view:
+            note = CHART_OUT_OF_VIEW_NOTE
+        elif has_candles:
             note = MONOCHROME_NOTE if self._screen_reading_mode == "monochrome" else None
         elif not self.is_running:
             note = "Chart watch is not running"
@@ -642,7 +736,9 @@ class VisionService:
 
         region = self._config.region if self._config else None
         source_window_title = None
-        if region is not None and self.is_running:
+        if self.is_running and self._tracked_window_handle is not None:
+            source_window_title = self._tracked_window_title
+        elif region is not None and self.is_running:
             try:
                 source_window_title = window_title_at(
                     region.left + region.width // 2, region.top + region.height // 2
@@ -652,6 +748,7 @@ class VisionService:
         chart_title = parse_chart_title(source_window_title)
         return ScreenCandlesResponse(
             available=has_candles,
+            in_view=in_view,
             captured_at=self._screen_candles_captured_at,
             region=region,
             candles=self._screen_candles if has_candles else [],
@@ -669,32 +766,55 @@ class VisionService:
         from window_info import find_chart_window
 
         monitors = await self._run_in_worker(list_monitors)
+        self._monitors = monitors
         physical_monitors = [monitor for monitor in monitors if not monitor.is_virtual_desktop]
 
         # 1) A window titled like a chart (TradingView: "SPX 6,910.39 ▼ ...") works with any
-        #    colour theme. Watch the part of it that is on a monitor.
+        #    colour theme, on any monitor. Watch (and follow) the part of it that is visible.
         chart_window = await self._run_in_worker(find_chart_window)
-        if chart_window is not None:
-            for monitor in physical_monitors or monitors:
-                left = max(chart_window.left, monitor.left)
-                top = max(chart_window.top, monitor.top)
-                right = min(chart_window.right, monitor.left + monitor.width)
-                bottom = min(chart_window.bottom, monitor.top + monitor.height)
-                if right - left >= 64 and bottom - top >= 64:
-                    window_region = ScreenRegion(
-                        left=left, top=top, width=right - left, height=bottom - top
-                    )
-                    if scan_request.start_watch:
-                        self.configure(VisionConfig(region=window_region))
-                        await self.start()
-                    return ChartScanResponse(
-                        found=True,
-                        region=window_region,
-                        monitor_index=monitor.index,
-                        candle_columns=0,
-                        message=f"Chart window found: {chart_window.title}",
-                        status=self.status(),
-                    )
+        clipped = (
+            clip_to_best_monitor(
+                chart_window.left,
+                chart_window.top,
+                chart_window.right,
+                chart_window.bottom,
+                monitors,
+            )
+            if chart_window is not None
+            else None
+        )
+        if chart_window is not None and clipped is not None:
+            monitor, window_region = clipped
+            already_following = (
+                self.is_running and self._tracked_window_handle == chart_window.handle
+            )
+            if scan_request.start_watch and not already_following:
+                self.configure(VisionConfig(region=window_region), tracked_window=chart_window)
+                await self.start()
+            return ChartScanResponse(
+                found=True,
+                region=window_region,
+                monitor_index=monitor.index,
+                candle_columns=0,
+                message=f"Chart window found: {chart_window.title}",
+                status=self.status(),
+            )
+        # The followed window is only hidden for now (minimised, covered, other tab): keep
+        # following it rather than switching to some other coloured shape on screen.
+        is_following_hidden_window = (
+            self.is_running
+            and self._tracked_window_handle is not None
+            and await self._run_in_worker(self._tracked_window_exists)
+        )
+        if is_following_hidden_window:
+            return ChartScanResponse(
+                found=False,
+                region=None,
+                monitor_index=None,
+                candle_columns=0,
+                message=CHART_OUT_OF_VIEW_NOTE,
+                status=self.status(),
+            )
 
         # 2) Otherwise look for green/red candles anywhere on screen.
         best_match = None
@@ -747,6 +867,13 @@ class VisionService:
             message="Chart found on screen",
             status=self.status(),
         )
+
+    def _tracked_window_exists(self) -> bool:
+        if sys.platform != "win32" or not self._tracked_window_handle:
+            return False
+        import ctypes
+
+        return bool(ctypes.windll.user32.IsWindow(self._tracked_window_handle))
 
     def _margin_pct(self, config: VisionConfig | None) -> float:
         if config is not None and config.left_margin_pct is not None:
@@ -842,6 +969,19 @@ class VisionService:
             if config is None:
                 return
             try:
+                if self._tracked_window_handle is not None:
+                    visibility, current_region = await self._run_in_worker(
+                        self._follow_tracked_window
+                    )
+                    self._chart_in_view = visibility == "visible"
+                    if current_region is None:
+                        # Hidden, covered or not a chart right now: keep the last reading and
+                        # don't feed the backtrack detector pixels that aren't the chart.
+                        await asyncio.sleep(self._settings.vision_interval_seconds)
+                        continue
+                    if current_region != config.region:
+                        config = config.model_copy(update={"region": current_region})
+                        self._config = config
                 frame = await self._run_in_worker(capture_region, config.region)
                 await self.process_frame(frame, config)
                 if self._last_error is not None:

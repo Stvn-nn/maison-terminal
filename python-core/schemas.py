@@ -347,6 +347,10 @@ class VisionStatus(BaseModel):
     config: VisionConfig | None
     last_analysis: VisionAnalysis | None
     last_error: str | None
+    chart_in_view: bool = Field(
+        default=True,
+        description="False while the followed chart window is minimised, covered or not a chart.",
+    )
 
 
 class MonitorInfo(BaseModel):
@@ -389,6 +393,10 @@ class ScreenCandlesResponse(BaseModel):
     scale: Literal["relative"] = Field(
         default="relative",
         description="Prices are 100 (bottom of the plot) to 200 (top), not market prices.",
+    )
+    in_view: bool = Field(
+        default=True,
+        description="False while the chart is out of view; candles are then the last reading.",
     )
     captured_at: datetime | None
     region: ScreenRegion | None
