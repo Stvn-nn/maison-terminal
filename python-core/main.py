@@ -40,7 +40,7 @@ from schemas import (
 from sizing import calculate_position_size
 from ws import WebSocketBroadcaster, build_event
 
-SERVICE_VERSION = "0.1.0"
+SERVICE_VERSION = "0.2.0"
 API_PREFIX = "/api/v1"
 
 logger = logging.getLogger("maison")
